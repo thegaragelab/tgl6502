@@ -2,3 +2,4 @@ hardware/~*
 hardware/Plots/
 hardware/* Report).txt
 hardware/*.mop
+firmware/Debug/
