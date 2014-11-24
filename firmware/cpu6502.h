@@ -12,6 +12,10 @@
 extern "C" {
 #endif
 
+//---------------------------------------------------------------------------
+// State information
+//---------------------------------------------------------------------------
+
 /** CPU state information
  *
  * This structure keeps track of the CPU state information - all registers
@@ -29,6 +33,47 @@ typedef struct _CPU_STATE {
 //! The global state information
 extern CPU_STATE g_cpuState;
 
+/** Represents the memory mapped IO area
+ *
+ * This structure maintains data for the memory mapped IO area.
+ */
+typedef struct _IO_STATE {
+  uint8_t m_pages[8]; //!< Memory mapping
+  } IO_STATE;
+
+//! The global IO state information
+extern IO_STATE g_ioState;
+
+//---------------------------------------------------------------------------
+// Memory and IO access
+//
+// The emulator host provides access to up to 2Mb of memory (1Mb RAM and 1Mb
+// ROM) in 8K pages. There are 8 such pages visible to the CPU at any time
+// and controlling the pages is done through a memory mapped page map.
+//---------------------------------------------------------------------------
+
+/** Initialise the memory and IO subsystem
+ *
+ * This function should be called every time the 'cpuReset()' function is
+ * called. In ensures the memory mapped IO region is simulating the 'power on'
+ * state.
+ */
+void cpuResetIO();
+
+/** Read a single byte from the CPU address space.
+*
+* @param address the 16 bit address to read a value from.
+*
+* @return the byte read from the address.
+*/
+uint8_t cpuReadByte(uint16_t address);
+
+/** Write a single byte to the CPU address space.
+*
+* @param address the 16 bit address to write a value to
+*/
+void cpuWriteByte(uint16_t address, uint8_t value);
+
 //---------------------------------------------------------------------------
 // Functions implemented by the emulator.
 //---------------------------------------------------------------------------
@@ -42,24 +87,6 @@ void cpuReset();
 /** Execute a single 6502 instruction
  */
 void cpuStep();
-
-//---------------------------------------------------------------------------
-// Functions implemented by the host
-//---------------------------------------------------------------------------
-
-/** Read a single byte from the CPU address space.
- *
- * @param address the 16 bit address to read a value from.
- *
- * @return the byte read from the address.
- */
-uint8_t cpuReadByte(uint16_t address);
-
-/** Write a single byte to the CPU address space.
- *
- * @param address the 16 bit address to write a value to
- */
-void cpuWriteByte(uint16_t address, uint8_t value);
 
 #ifdef __cplusplus
 }
