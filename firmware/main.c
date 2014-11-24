@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <Windows.h>
 #include "cpu6502.h"
 
 //! Size of ROM in emulated machine
@@ -15,6 +16,22 @@
 
 //! The memory allocated for the ROM
 extern uint8_t g_ROM[];
+
+/** Read a character from the keyboard
+ *
+ * Return 0 if no character is available otherwise return the ASCII character.
+ */
+uint8_t readChar() {
+  if (_kbhit())
+    return _getch();
+  return 0;
+  }
+
+/** Write a character to the console.
+ */
+void writeChar(uint8_t ch) {
+  printf("%c", ch);
+  }
 
 /** Program entry point
 */
@@ -38,24 +55,30 @@ int main(int argc, char *argv[]) {
   // Now run the emulator
   cpuResetIO();
   cpuReset();
-  uint16_t count = 0;
+  uint16_t inner = 0, outer = 0;
   while (true) {
     cpuStep();
-    count++;
-    if (count==1000) {
-      fprintf(fp, "%ul,%ul,%ul,%ul\n",
-        g_memoryStats.m_reads,
-        g_memoryStats.m_writes,
-        g_memoryStats.m_loads,
-        g_memoryStats.m_saves
-        );
-      fflush(fp);
-      count = 0;
-      g_memoryStats.m_reads = 0;
-      g_memoryStats.m_writes = 0;
-      g_memoryStats.m_loads = 0;
-      g_memoryStats.m_saves = 0;
+    inner++;
+    if (inner==500) {
+      Sleep(1);
+      inner = 0;
+      outer++;
+      if (outer == 500) {
+        fprintf(fp, "%ul,%ul,%ul,%ul\n",
+          g_memoryStats.m_reads,
+          g_memoryStats.m_writes,
+          g_memoryStats.m_loads,
+          g_memoryStats.m_saves
+          );
+        fflush(fp);
+        outer = 0;
+        g_memoryStats.m_reads = 0;
+        g_memoryStats.m_writes = 0;
+        g_memoryStats.m_loads = 0;
+        g_memoryStats.m_saves = 0;
+        }
       }
     }
   return 0;
   }
+
