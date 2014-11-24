@@ -81,8 +81,6 @@ CPU_STATE g_cpuState;
 
 
 //helper variables
-uint64_t instructions = 0; //keep track of total instructions executed
-uint32_t clockticks6502 = 0, clockgoal6502 = 0;
 uint16_t oldpc, ea, reladdr, value, result;
 uint8_t opcode, oldstatus;
 
@@ -110,7 +108,6 @@ uint8_t pull8() {
 
 static void (*addrtable[256])();
 static void (*optable[256])();
-uint8_t penaltyop, penaltyaddr;
 
 //addressing mode functions, calculates effective addresses
 static void imp() { //implied
@@ -151,11 +148,6 @@ static void absx() { //absolute,X
   ea = ((uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8));
   startpage = ea & 0xFF00;
   ea += (uint16_t)g_cpuState.m_x;
-
-  if (startpage != (ea & 0xFF00)) { //one cycle penlty for page-crossing on some opcodes
-    penaltyaddr = 1;
-    }
-
   g_cpuState.m_pc += 2;
   }
 
@@ -164,11 +156,6 @@ static void absy() { //absolute,Y
   ea = ((uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8));
   startpage = ea & 0xFF00;
   ea += (uint16_t)g_cpuState.m_y;
-
-  if (startpage != (ea & 0xFF00)) { //one cycle penlty for page-crossing on some opcodes
-    penaltyaddr = 1;
-    }
-
   g_cpuState.m_pc += 2;
   }
 
@@ -193,10 +180,6 @@ static void indy() { // (indirect),Y
   ea = (uint16_t)cpuReadByte(eahelp) | ((uint16_t)cpuReadByte(eahelp2) << 8);
   startpage = ea & 0xFF00;
   ea += (uint16_t)g_cpuState.m_y;
-
-  if (startpage != (ea & 0xFF00)) { //one cycle penlty for page-crossing on some opcodes
-    penaltyaddr = 1;
-    }
   }
 
 static uint16_t getvalue() {
@@ -216,7 +199,6 @@ static void putvalue(uint16_t saveval) {
 
 //instruction handler functions
 static void adc() {
-  penaltyop = 1;
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a + value + (uint16_t)(g_cpuState.m_status & FLAG_CARRY);
 
@@ -237,8 +219,6 @@ static void adc() {
       g_cpuState.m_a += 0x60;
       setcarry();
       }
-
-    clockticks6502++;
     }
 #endif
 
@@ -246,7 +226,6 @@ static void adc() {
   }
 
 static void and() {
-  penaltyop = 1;
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a & value;
 
@@ -271,10 +250,6 @@ static void bcc() {
   if ((g_cpuState.m_status & FLAG_CARRY) == 0) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
-    if ((oldpc & 0xFF00) != (g_cpuState.m_pc & 0xFF00))
-      clockticks6502 += 2; //check if jump crossed a page boundary
-    else
-      clockticks6502++;
     }
   }
 
@@ -282,10 +257,6 @@ static void bcs() {
   if ((g_cpuState.m_status & FLAG_CARRY) == FLAG_CARRY) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
-    if ((oldpc & 0xFF00) != (g_cpuState.m_pc & 0xFF00))
-      clockticks6502 += 2; //check if jump crossed a page boundary
-    else
-      clockticks6502++;
     }
   }
 
@@ -293,10 +264,6 @@ static void beq() {
   if ((g_cpuState.m_status & FLAG_ZERO) == FLAG_ZERO) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
-    if ((oldpc & 0xFF00) != (g_cpuState.m_pc & 0xFF00))
-      clockticks6502 += 2; //check if jump crossed a page boundary
-    else
-      clockticks6502++;
     }
   }
 
@@ -312,10 +279,6 @@ static void bmi() {
   if ((g_cpuState.m_status & FLAG_SIGN) == FLAG_SIGN) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
-    if ((oldpc & 0xFF00) != (g_cpuState.m_pc & 0xFF00))
-      clockticks6502 += 2; //check if jump crossed a page boundary
-    else
-      clockticks6502++;
     }
   }
 
@@ -323,10 +286,6 @@ static void bne() {
   if ((g_cpuState.m_status & FLAG_ZERO) == 0) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
-    if ((oldpc & 0xFF00) != (g_cpuState.m_pc & 0xFF00))
-      clockticks6502 += 2; //check if jump crossed a page boundary
-    else
-      clockticks6502++;
     }
   }
 
@@ -334,10 +293,6 @@ static void bpl() {
   if ((g_cpuState.m_status & FLAG_SIGN) == 0) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
-    if ((oldpc & 0xFF00) != (g_cpuState.m_pc & 0xFF00))
-      clockticks6502 += 2; //check if jump crossed a page boundary
-    else
-      clockticks6502++;
     }
   }
 
@@ -353,10 +308,6 @@ static void bvc() {
   if ((g_cpuState.m_status & FLAG_OVERFLOW) == 0) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
-    if ((oldpc & 0xFF00) != (g_cpuState.m_pc & 0xFF00))
-      clockticks6502 += 2; //check if jump crossed a page boundary
-    else
-      clockticks6502++;
     }
   }
 
@@ -364,10 +315,6 @@ static void bvs() {
   if ((g_cpuState.m_status & FLAG_OVERFLOW) == FLAG_OVERFLOW) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
-    if ((oldpc & 0xFF00) != (g_cpuState.m_pc & 0xFF00))
-      clockticks6502 += 2; //check if jump crossed a page boundary
-    else
-      clockticks6502++;
     }
   }
 
@@ -388,7 +335,6 @@ static void clv() {
   }
 
 static void cmp() {
-  penaltyop = 1;
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a - value;
 
@@ -458,7 +404,6 @@ static void dey() {
   }
 
 static void eor() {
-  penaltyop = 1;
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a ^ value;
 
@@ -502,7 +447,6 @@ static void jsr() {
   }
 
 static void lda() {
-  penaltyop = 1;
   value = getvalue();
   g_cpuState.m_a = (uint8_t)(value & 0x00FF);
 
@@ -511,7 +455,6 @@ static void lda() {
   }
 
 static void ldx() {
-  penaltyop = 1;
   value = getvalue();
   g_cpuState.m_x = (uint8_t)(value & 0x00FF);
 
@@ -520,7 +463,6 @@ static void ldx() {
   }
 
 static void ldy() {
-  penaltyop = 1;
   value = getvalue();
   g_cpuState.m_y = (uint8_t)(value & 0x00FF);
 
@@ -543,20 +485,10 @@ static void lsr() {
   }
 
 static void nop() {
-  switch (opcode) {
-    case 0x1C:
-    case 0x3C:
-    case 0x5C:
-    case 0x7C:
-    case 0xDC:
-    case 0xFC:
-    penaltyop = 1;
-    break;
-    }
+  // Do nothing
   }
 
 static void ora() {
-  penaltyop = 1;
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a | value;
 
@@ -622,7 +554,6 @@ static void rts() {
   }
 
 static void sbc() {
-  penaltyop = 1;
   value = getvalue() ^ 0x00FF;
   result = (uint16_t)g_cpuState.m_a + value + (uint16_t)(g_cpuState.m_status & FLAG_CARRY);
 
@@ -644,8 +575,6 @@ static void sbc() {
       g_cpuState.m_a += 0x60;
       setcarry();
       }
-
-    clockticks6502++;
     }
 #endif
 
@@ -726,50 +655,36 @@ static void sax() {
   sta();
   stx();
   putvalue(g_cpuState.m_a & g_cpuState.m_x);
-  if (penaltyop && penaltyaddr)
-    clockticks6502--;
   }
 
 static void dcp() {
   dec();
   cmp();
-  if (penaltyop && penaltyaddr)
-    clockticks6502--;
   }
 
 static void isb() {
   inc();
   sbc();
-  if (penaltyop && penaltyaddr)
-    clockticks6502--;
   }
 
 static void slo() {
   asl();
   ora();
-  if (penaltyop && penaltyaddr)
-    clockticks6502--;
   }
 
 static void rla() {
   rol();
   and();
-  if (penaltyop && penaltyaddr)
-    clockticks6502--;
   }
 
 static void sre() {
   lsr();
   eor();
-  if (penaltyop && penaltyaddr)
-    clockticks6502--;
   }
 
 static void rra() {
   ror();
   adc();
-  if (penaltyop && penaltyaddr)
-    clockticks6502--;
   }
 #else
     #define lax nop
@@ -823,27 +738,6 @@ static void (*optable[256])() = {
   /* F */      beq,  sbc,  nop,  isb,  nop,  sbc,  inc,  isb,  sed,  sbc,  nop,  isb,  nop,  sbc,  inc,  isb  /* F */
   };
 
-static const uint32_t ticktable[256] = {
-  /*        |  0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  A  |  B  |  C  |  D  |  E  |  F  |     */
-  /* 0 */      7,    6,    2,    8,    3,    3,    5,    5,    3,    2,    2,    2,    4,    4,    6,    6,  /* 0 */
-  /* 1 */      2,    5,    2,    8,    4,    4,    6,    6,    2,    4,    2,    7,    4,    4,    7,    7,  /* 1 */
-  /* 2 */      6,    6,    2,    8,    3,    3,    5,    5,    4,    2,    2,    2,    4,    4,    6,    6,  /* 2 */
-  /* 3 */      2,    5,    2,    8,    4,    4,    6,    6,    2,    4,    2,    7,    4,    4,    7,    7,  /* 3 */
-  /* 4 */      6,    6,    2,    8,    3,    3,    5,    5,    3,    2,    2,    2,    3,    4,    6,    6,  /* 4 */
-  /* 5 */      2,    5,    2,    8,    4,    4,    6,    6,    2,    4,    2,    7,    4,    4,    7,    7,  /* 5 */
-  /* 6 */      6,    6,    2,    8,    3,    3,    5,    5,    4,    2,    2,    2,    5,    4,    6,    6,  /* 6 */
-  /* 7 */      2,    5,    2,    8,    4,    4,    6,    6,    2,    4,    2,    7,    4,    4,    7,    7,  /* 7 */
-  /* 8 */      2,    6,    2,    6,    3,    3,    3,    3,    2,    2,    2,    2,    4,    4,    4,    4,  /* 8 */
-  /* 9 */      2,    6,    2,    6,    4,    4,    4,    4,    2,    5,    2,    5,    5,    5,    5,    5,  /* 9 */
-  /* A */      2,    6,    2,    6,    3,    3,    3,    3,    2,    2,    2,    2,    4,    4,    4,    4,  /* A */
-  /* B */      2,    5,    2,    5,    4,    4,    4,    4,    2,    4,    2,    4,    4,    4,    4,    4,  /* B */
-  /* C */      2,    6,    2,    8,    3,    3,    5,    5,    2,    2,    2,    2,    4,    4,    6,    6,  /* C */
-  /* D */      2,    5,    2,    8,    4,    4,    6,    6,    2,    4,    2,    7,    4,    4,    7,    7,  /* D */
-  /* E */      2,    6,    2,    8,    3,    3,    5,    5,    2,    2,    2,    2,    4,    4,    6,    6,  /* E */
-  /* F */      2,    5,    2,    8,    4,    4,    6,    6,    2,    4,    2,    7,    4,    4,    7,    7   /* F */
-  };
-
-
 void nmi6502() {
   push16(g_cpuState.m_pc);
   push8(g_cpuState.m_status);
@@ -858,32 +752,6 @@ void irq6502() {
   g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
   }
 
-uint8_t callexternal = 0;
-void (*loopexternal)();
-
-void exec6502(uint32_t tickcount) {
-  clockgoal6502 += tickcount;
-
-  while (clockticks6502 < clockgoal6502) {
-    opcode = cpuReadByte(g_cpuState.m_pc++);
-
-    penaltyop = 0;
-    penaltyaddr = 0;
-
-    (*addrtable[opcode])();
-    (*optable[opcode])();
-    clockticks6502 += ticktable[opcode];
-    if (penaltyop && penaltyaddr)
-      clockticks6502++;
-
-    instructions++;
-
-    if (callexternal)
-      (*loopexternal)();
-    }
-
-  }
-
 void cpuReset() {
   g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFC) | ((uint16_t)cpuReadByte(0xFFFD) << 8);
   g_cpuState.m_a = 0;
@@ -895,27 +763,6 @@ void cpuReset() {
 
 void cpuStep() {
   opcode = cpuReadByte(g_cpuState.m_pc++);
-
-  penaltyop = 0;
-  penaltyaddr = 0;
-
   (*addrtable[opcode])();
   (*optable[opcode])();
-  clockticks6502 += ticktable[opcode];
-  if (penaltyop && penaltyaddr)
-    clockticks6502++;
-  clockgoal6502 = clockticks6502;
-
-  instructions++;
-
-  if (callexternal)
-    (*loopexternal)();
-  }
-
-void hookexternal(void *funcptr) {
-  if (funcptr != (void *)NULL) {
-    loopexternal = funcptr;
-    callexternal = 1;
-    } else
-    callexternal = 0;
   }
