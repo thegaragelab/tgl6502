@@ -5,12 +5,9 @@
 *
 * This file implements the memory and IO access functions for the emulator.
 *--------------------------------------------------------------------------*/
-#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "cpu6502.h"
-
-static FILE *fpLog = NULL;
 
 /* These are the addresses used for console input and output by EhBASIC
  *
@@ -92,79 +89,40 @@ void cpuResetIO() {
   // Initialise the paragraph table (use first 4 ram paragraphs)
   for(index=0; index<PARA_COUNT; index++)
     g_paragraphs.m_paraInfo[index] = (index << 3) | index;
-  // Open the log file
-  fpLog = fopen("access.log", "w");
   }
 
 /** Load a paragraph from ROM
  */
 static void loadParaROM(uint8_t para, uint16_t address) {
-  fprintf(fpLog, "Load ROM paragraph %d from 0x%04x\n", para, address);
   uint32_t offset = (uint32_t)(address & 0x0FFF) << 7;
   uint8_t *pTarget = &g_paragraphs.m_paraData[para * PARA_SIZE];
   for(uint8_t index=0; index<PARA_SIZE; index++, pTarget++, offset++)
     *pTarget = g_ROM[offset];
   g_memoryStats.m_loads++;
   g_paragraphs.m_paraInfo[para] = address << 3;
-  // Show paragraph state
-  for(para=0; para<PARA_COUNT; para++)
-    fprintf(fpLog, "%d: %d, 0x%04x ", para, g_paragraphs.m_paraInfo[para]&PARA_SEQUENCE, g_paragraphs.m_paraInfo[para] >> 3);
-  fprintf(fpLog, "\n");
-  fflush(fpLog);
   }
 
 /** Load a paragraph from RAM
  */
 static void loadParaRAM(uint8_t para, uint16_t address) {
-  fprintf(fpLog, "Load RAM paragraph %d from 0x%04x\n", para, address);
   uint32_t offset = (uint32_t)(address & 0x0FFF) << 7;
   uint8_t *pTarget = &g_paragraphs.m_paraData[para * PARA_SIZE];
   for(uint8_t index=0; index<PARA_SIZE; index++, pTarget++, offset++)
     *pTarget = g_RAM[offset];
   g_memoryStats.m_loads++;
   g_paragraphs.m_paraInfo[para] = address << 3;
-  // Show paragraph state
-  for(para=0; para<PARA_COUNT; para++)
-    fprintf(fpLog, "%d: %d, 0x%04x ", para, g_paragraphs.m_paraInfo[para]&PARA_SEQUENCE, g_paragraphs.m_paraInfo[para] >> 3);
-  fprintf(fpLog, "\n");
-  fflush(fpLog);
   }
 
 /** Save a paragraph to RAM
  */
 static void saveParaRAM(uint8_t para) {
-  fprintf(fpLog, "Save RAM paragraph %d to 0x%04x\n", para, g_paragraphs.m_paraInfo[para] >> 3);
   uint32_t offset = (uint32_t)(g_paragraphs.m_paraInfo[para] & PARA_ADDRESS) << 4;
   uint8_t *pTarget = &g_paragraphs.m_paraData[para * PARA_SIZE];
-  bool pageOK = true;
   for(uint8_t index=0; index<PARA_SIZE; index++, pTarget++, offset++)
-    pageOK = pageOK & (g_RAM[offset] == *pTarget);
-  if (!pageOK)
-    fprintf(fpLog, "Page save failed. Values not consistent.\n");
+    g_RAM[offset] = *pTarget;
   // Clear the dirty flag
   g_paragraphs.m_paraInfo[para] &= ~((uint16_t)PARA_DIRTY);
   g_memoryStats.m_saves++;
-  // Show paragraph state
-  for(para=0; para<PARA_COUNT; para++)
-    fprintf(fpLog, "%d: %d, 0x%04x ", para, g_paragraphs.m_paraInfo[para]&PARA_SEQUENCE, g_paragraphs.m_paraInfo[para] >> 3);
-  fprintf(fpLog, "\n");
-  }
-
-/** Save a paragraph to RAM
- */
-static void verifyParaRAM(uint8_t para) {
-  fprintf(fpLog, "Verifying RAM paragraph %d at 0x%04x\n", para, g_paragraphs.m_paraInfo[para] >> 3);
-  uint32_t offset = (uint32_t)(g_paragraphs.m_paraInfo[para] & PARA_ADDRESS) << 4;
-  uint8_t *pTarget = &g_paragraphs.m_paraData[para * PARA_SIZE];
-  if (offset>=RAM_SIZE) {
-    fprintf(fpLog, "Page address out of range - 0x%08x\n", offset);
-    return;
-    }
-  bool pageOK = true;
-  for(uint8_t index=0; index<PARA_SIZE; index++, pTarget++, offset++)
-    pageOK = pageOK & (g_RAM[offset] == *pTarget);
-  if (!pageOK)
-    fprintf(fpLog, "Verification failed. Values not consistent.\n");
   }
 
 /** Bump the given parage to the most recently used
@@ -180,13 +138,6 @@ static void bumpParagraph(uint8_t para) {
       g_paragraphs.m_paraInfo[index]++;
     }
   g_paragraphs.m_paraInfo[para] &= ~(uint16_t)PARA_SEQUENCE;
-  // Show paragraph state
-/*
-  for(para=0; para<PARA_COUNT; para++)
-    fprintf(fpLog, "%d: %d, 0x%04x ", para, g_paragraphs.m_paraInfo[para]&PARA_SEQUENCE, g_paragraphs.m_paraInfo[para] >> 3);
-  fprintf(fpLog, "\n");
-  fflush(fpLog);
-*/
   }
 
 /** Get the paragraph for the given CPU address
@@ -207,8 +158,6 @@ static uint8_t getParagraph(uint16_t address) {
   // If the discarded paragraph is dirty, write it
   if(g_paragraphs.m_paraInfo[index]&PARA_DIRTY)
     saveParaRAM(index);
-  else if(!(g_paragraphs.m_paraInfo[index]&PARA_ROM))
-    verifyParaRAM(index);
   // Load the new page
   if(para&PARA_ROM)
     loadParaROM(index, para >> 3);
@@ -216,12 +165,6 @@ static uint8_t getParagraph(uint16_t address) {
     loadParaRAM(index, para >> 3);
   // All done
   return index;
-  }
-
-uint32_t getPhysicalAddress(uint16_t address) {
-  uint32_t result = (uint32_t)address & 0x1FFF;
-  result |= (uint32_t)g_ioState.m_pages[address >> 13] << 13;
-  return result;
   }
 
 /** Read a single byte from the CPU address space.
@@ -237,21 +180,7 @@ uint8_t cpuReadByte(uint16_t address) {
   // Read from memory
   g_memoryStats.m_reads++;
   uint8_t para = getParagraph(address);
-// DEBUG
-  uint32_t phys = getPhysicalAddress(address);
-  uint8_t value = 0;
-  if (phys&0x80000L)
-    value = g_ROM[phys & 0xFFFF];
-  else
-    value = g_RAM[phys];
-  if (value!=g_paragraphs.m_paraData[para * PARA_SIZE + (address & 0x7F)])
-    fprintf(fpLog, "ERROR: Value mismatch at physical 0x%08x - got 0x%02x, expected 0x%02x\n",
-      phys,
-      value,
-      g_paragraphs.m_paraData[para * PARA_SIZE + (address & 0x7F)]
-      );
-// END DEBUG
-  return value; //g_paragraphs.m_paraData[para * PARA_SIZE + (address & 0x7F)];
+  return g_paragraphs.m_paraData[para * PARA_SIZE + (address & 0x7F)];
   }
 
 /** Write a single byte to the CPU address space.
@@ -269,9 +198,6 @@ void cpuWriteByte(uint16_t address, uint8_t value) {
   if(g_paragraphs.m_paraInfo[para]&0x8000)
     return;
   g_memoryStats.m_writes++;
-// DEBUG
-  g_RAM[getPhysicalAddress(address)] = value;
-// END DEBUG
   g_paragraphs.m_paraData[para * PARA_SIZE + (address & 0x7F)] = value;
   g_paragraphs.m_paraInfo[para] |= PARA_DIRTY;
   }
