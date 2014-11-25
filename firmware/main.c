@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <Windows.h>
+#include <conio.h>
 #include "cpu6502.h"
 
 //! Size of ROM in emulated machine
@@ -34,7 +34,7 @@ void writeChar(uint8_t ch) {
   }
 
 /** Program entry point
-*/
+ */
 int main(int argc, char *argv[]) {
   // Load the contents of ROM
   FILE *fp = fopen("6502.rom", "rb");
@@ -50,39 +50,11 @@ int main(int argc, char *argv[]) {
   while (read > 0);
   fclose(fp);
   printf("Read %u bytes from '6502.rom'\n", index);
-  // Set up the statistics log
-  fp = fopen("memory.log", "w");
   // Now run the emulator
   cpuResetIO();
   cpuReset();
-  uint16_t inner = 0, outer = 0;
-  while (true) {
+  while (true)
     cpuStep();
-    inner++;
-    if (inner==500) {
-      Sleep(1);
-      inner = 0;
-      outer++;
-      if (outer == 500) {
-        fprintf(fp, "%u,%u,%u,%u,%u,%u\n",
-          g_memoryStats.m_reads,
-          g_memoryStats.m_writes,
-          g_memoryStats.m_hit,
-          g_memoryStats.m_miss,
-          g_memoryStats.m_loads,
-          g_memoryStats.m_saves
-          );
-        fflush(fp);
-        outer = 0;
-        g_memoryStats.m_reads = 0;
-        g_memoryStats.m_writes = 0;
-        g_memoryStats.m_hit = 0;
-        g_memoryStats.m_miss = 0;
-        g_memoryStats.m_loads = 0;
-        g_memoryStats.m_saves = 0;
-        }
-      }
-    }
   return 0;
   }
 
