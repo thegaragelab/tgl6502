@@ -64,9 +64,11 @@ int main(int argc, char *argv[]) {
       inner = 0;
       outer++;
       if (outer == 500) {
-        fprintf(fp, "%ul,%ul,%ul,%ul\n",
+        fprintf(fp, "%u,%u,%u,%u,%u,%u\n",
           g_memoryStats.m_reads,
           g_memoryStats.m_writes,
+          g_memoryStats.m_hit,
+          g_memoryStats.m_miss,
           g_memoryStats.m_loads,
           g_memoryStats.m_saves
           );
@@ -74,6 +76,8 @@ int main(int argc, char *argv[]) {
         outer = 0;
         g_memoryStats.m_reads = 0;
         g_memoryStats.m_writes = 0;
+        g_memoryStats.m_hit = 0;
+        g_memoryStats.m_miss = 0;
         g_memoryStats.m_loads = 0;
         g_memoryStats.m_saves = 0;
         }

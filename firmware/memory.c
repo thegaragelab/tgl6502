@@ -150,8 +150,10 @@ static uint8_t getParagraph(uint16_t address) {
   for(index=0; index<PARA_COUNT; index++)
     if((g_paragraphs.m_paraInfo[index] & PARA_ADDRESS)==para) {
       bumpParagraph(index);
+      g_memoryStats.m_hit++;
       return index;
       }
+  g_memoryStats.m_miss++;
   // Get the oldest paragraph and swap it out
   for(index=0; (index<PARA_COUNT) && ((g_paragraphs.m_paraInfo[index]&PARA_SEQUENCE)!=3) ; index++);
   bumpParagraph(index);

@@ -53,8 +53,10 @@ extern IO_STATE g_ioState;
  * be used to measure performance of the memory management unit.
  */
 typedef struct _MEMORY_STATISTICS {
-  uint32_t m_reads; //!< Total number of read operations
+  uint32_t m_reads;  //!< Total number of read operations
   uint32_t m_writes; //!< Total number of write operations
+  uint32_t m_hit;    //!< Number of cache hits
+  uint32_t m_miss;   //!< Number of chache misses
   uint32_t m_loads;  //!< Number of loads (ROM/RAM to active paragraph table)
   uint32_t m_saves;  //!< Number of saves (active paragraph table to ROM/RAM)
   } MEMORY_STATISTICS;
