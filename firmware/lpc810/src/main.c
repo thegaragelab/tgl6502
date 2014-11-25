@@ -33,10 +33,13 @@
 */
 /**************************************************************************/
 #include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include "LPC8xx.h"
 #include "gpio.h"
 #include "mrt.h"
 #include "uart.h"
+#include "cpu6502.h"
 
 #if defined(__CODE_RED)
   #include <cr_section_macros.h>
@@ -53,8 +56,7 @@
 /* SWDIO pin (PIO0_2).                               */
 // #define USE_SWD
 
-void configurePins()
-{
+void configurePins() {
   /* Enable SWM clock */
 	//  LPC_SYSCON->SYSAHBCLKCTRL |= (1 << 7);  // this is already done in SystemInit()
 
@@ -91,10 +93,9 @@ void configurePins()
        ------------------------------------------------ */
     LPC_SWM->PINENABLE0 = 0xffffffb3UL;   
   #endif  
-}
+  }
 
-int main(void)
-{
+int main(void) {
   /* Initialise the GPIO block */
   gpioInit();
 
@@ -112,22 +113,10 @@ int main(void)
     LPC_GPIO_PORT->DIR0 |= (1 << LED_LOCATION);
   #endif
 
-  while(1)
-  {
-    #if !defined(USE_SWD)
-      /* Turn LED Off by setting the GPIO pin high */
-      LPC_GPIO_PORT->SET0 = 1 << LED_LOCATION;
-      mrtDelay(500);
-
-      /* Turn LED On by setting the GPIO pin low */
-      LPC_GPIO_PORT->CLR0 = 1 << LED_LOCATION;
-      mrtDelay(500);
-    #else
-      /* Just insert a 1 second delay */
-      mrtDelay(1000);
-    #endif
-
-    /* Send some text (printf is redirected to UART0) */
-    printf("Hello, LPC810!\n\r");
+  // TODO: Allow time to select EEPROM load mode
+  // Go into main emulation loop
+  cpuResetIO();
+  cpuReset();
+  while (true)
+    cpuStep();
   }
-}
