@@ -26,13 +26,13 @@
 //! The start of ROM space in physical memory
 #define ROM_BASE 0x00080000L
 
-/* TODO: Use external SPI chips, not memory buffer
+#if defined(_MSC_VER) // For Windows simulator
 //! RAM memory
 uint8_t g_RAM[RAM_SIZE];
 
 //! ROM memory
 uint8_t g_ROM[ROM_SIZE];
-*/
+#endif
 
 //! IO state information
 IO_STATE g_ioState;
@@ -69,20 +69,21 @@ uint32_t getPhysicalAddress(uint16_t address) {
  * @return the byte read from the address.
  */
 uint8_t cpuReadByte(uint16_t address) {
-/* TODO: Implement this correctly
+#if defined(_MSC_VER) // For Windows simulator
   // Simulated keyboard for EhBASIC
   if (address == CONSOLE_IN)
     return readChar();
-*/
+#endif
   // Read from memory
   uint32_t phys = getPhysicalAddress(address);
-/* TODO: Replace with SPI read
+#if defined(_MSC_VER) // For Windows simulator
   if (phys&ROM_BASE)
     return (phys<(ROM_BASE + ROM_SIZE))?g_ROM[phys & ~ROM_BASE]:0;
   // It's in RAM
   return (phys<RAM_SIZE)?g_RAM[phys]:0;
-*/
+#else
   return 0;
+#endif
   }
 
 /** Write a single byte to the CPU address space.
@@ -90,18 +91,17 @@ uint8_t cpuReadByte(uint16_t address) {
  * @param address the 16 bit address to write a value to
  */
 void cpuWriteByte(uint16_t address, uint8_t value) {
-/* TODO: Implement this correctly
+#if defined(_MSC_VER) // For Windows simulator
   // Simulate console for EhBASIC
   if(address == CONSOLE_OUT) {
     writeChar(value);
     return;
     }
-*/
+#endif
   // Write data to RAM only
   uint32_t phys = getPhysicalAddress(address);
-/* TODO: Replace with SPI write
+#if defined(_MSC_VER) // For Windows simulator
   if (phys<RAM_SIZE)
     g_RAM[phys] = value;
-*/
+#endif
   }
-

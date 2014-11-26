@@ -112,7 +112,7 @@ static uint16_t getvalue() {
     return((uint16_t)cpuReadByte(ea));
   }
 
-static inline void putvalue(uint16_t saveval) {
+static void putvalue(uint16_t saveval) {
   if ((opcode==0x0a)||(opcode==0x2a)||(opcode==0x4a)||(opcode==0x6a))
     g_cpuState.m_a = (uint8_t)(saveval & 0x00FF);
   else
@@ -120,7 +120,7 @@ static inline void putvalue(uint16_t saveval) {
   }
 
 //instruction handler functions
-static inline void adc() {
+static void adc() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a + value + (uint16_t)(g_cpuState.m_status & FLAG_CARRY);
 
@@ -142,7 +142,7 @@ static inline void adc() {
   saveaccum(result);
   }
 
-static inline void and() {
+static void and() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a & value;
 
@@ -152,7 +152,7 @@ static inline void and() {
   saveaccum(result);
   }
 
-static inline void asl() {
+static void asl() {
   value = getvalue();
   result = value << 1;
 
@@ -163,28 +163,28 @@ static inline void asl() {
   putvalue(result);
   }
 
-static inline void bcc() {
+static void bcc() {
   if ((g_cpuState.m_status & FLAG_CARRY) == 0) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
     }
   }
 
-static inline void bcs() {
+static void bcs() {
   if ((g_cpuState.m_status & FLAG_CARRY) == FLAG_CARRY) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
     }
   }
 
-static inline void beq() {
+static void beq() {
   if ((g_cpuState.m_status & FLAG_ZERO) == FLAG_ZERO) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
     }
   }
 
-static inline void bit() {
+static void bit() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a & value;
 
@@ -192,28 +192,28 @@ static inline void bit() {
   g_cpuState.m_status = (g_cpuState.m_status & 0x3F) | (uint8_t)(value & 0xC0);
   }
 
-static inline void bmi() {
+static void bmi() {
   if ((g_cpuState.m_status & FLAG_SIGN) == FLAG_SIGN) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
     }
   }
 
-static inline void bne() {
+static void bne() {
   if ((g_cpuState.m_status & FLAG_ZERO) == 0) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
     }
   }
 
-static inline void bpl() {
+static void bpl() {
   if ((g_cpuState.m_status & FLAG_SIGN) == 0) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
     }
   }
 
-static inline void brk() {
+static void brk() {
   g_cpuState.m_pc++;
   push16(g_cpuState.m_pc); //push next instruction address onto stack
   push8(g_cpuState.m_status | FLAG_BREAK); //push CPU status to stack
@@ -221,37 +221,37 @@ static inline void brk() {
   g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
   }
 
-static inline void bvc() {
+static void bvc() {
   if ((g_cpuState.m_status & FLAG_OVERFLOW) == 0) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
     }
   }
 
-static inline void bvs() {
+static void bvs() {
   if ((g_cpuState.m_status & FLAG_OVERFLOW) == FLAG_OVERFLOW) {
     oldpc =g_cpuState.m_pc;
     g_cpuState.m_pc += reladdr;
     }
   }
 
-static inline void clc() {
+static void clc() {
   clearcarry();
   }
 
-static inline void cld() {
+static void cld() {
   cleardecimal();
   }
 
-static inline void cli() {
+static void cli() {
   clearinterrupt();
   }
 
-static inline void clv() {
+static void clv() {
   clearoverflow();
   }
 
-static inline void cmp() {
+static void cmp() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a - value;
 
@@ -266,7 +266,7 @@ static inline void cmp() {
   signcalc(result);
   }
 
-static inline void cpx() {
+static void cpx() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_x - value;
 
@@ -281,7 +281,7 @@ static inline void cpx() {
   signcalc(result);
   }
 
-static inline void cpy() {
+static void cpy() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_y - value;
 
@@ -296,7 +296,7 @@ static inline void cpy() {
   signcalc(result);
   }
 
-static inline void dec() {
+static void dec() {
   value = getvalue();
   result = value - 1;
 
@@ -306,21 +306,21 @@ static inline void dec() {
   putvalue(result);
   }
 
-static inline void dex() {
+static void dex() {
   g_cpuState.m_x--;
 
   zerocalc(g_cpuState.m_x);
   signcalc(g_cpuState.m_x);
   }
 
-static inline void dey() {
+static void dey() {
   g_cpuState.m_y--;
 
   zerocalc(g_cpuState.m_y);
   signcalc(g_cpuState.m_y);
   }
 
-static inline void eor() {
+static void eor() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a ^ value;
 
@@ -330,7 +330,7 @@ static inline void eor() {
   saveaccum(result);
   }
 
-static inline void inc() {
+static void inc() {
   value = getvalue();
   result = value + 1;
 
@@ -340,30 +340,30 @@ static inline void inc() {
   putvalue(result);
   }
 
-static inline void inx() {
+static void inx() {
   g_cpuState.m_x++;
 
   zerocalc(g_cpuState.m_x);
   signcalc(g_cpuState.m_x);
   }
 
-static inline void iny() {
+static void iny() {
   g_cpuState.m_y++;
 
   zerocalc(g_cpuState.m_y);
   signcalc(g_cpuState.m_y);
   }
 
-static inline void jmp() {
+static void jmp() {
   g_cpuState.m_pc = ea;
   }
 
-static inline void jsr() {
+static void jsr() {
   push16(g_cpuState.m_pc - 1);
   g_cpuState.m_pc = ea;
   }
 
-static inline void lda() {
+static void lda() {
   value = getvalue();
   g_cpuState.m_a = (uint8_t)(value & 0x00FF);
 
@@ -371,7 +371,7 @@ static inline void lda() {
   signcalc(g_cpuState.m_a);
   }
 
-static inline void ldx() {
+static void ldx() {
   value = getvalue();
   g_cpuState.m_x = (uint8_t)(value & 0x00FF);
 
@@ -379,7 +379,7 @@ static inline void ldx() {
   signcalc(g_cpuState.m_x);
   }
 
-static inline void ldy() {
+static void ldy() {
   value = getvalue();
   g_cpuState.m_y = (uint8_t)(value & 0x00FF);
 
@@ -387,7 +387,7 @@ static inline void ldy() {
   signcalc(g_cpuState.m_y);
   }
 
-static inline void lsr() {
+static void lsr() {
   value = getvalue();
   result = value >> 1;
 
@@ -401,7 +401,7 @@ static inline void lsr() {
   putvalue(result);
   }
 
-static inline void ora() {
+static void ora() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a | value;
 
@@ -411,26 +411,26 @@ static inline void ora() {
   saveaccum(result);
   }
 
-static inline void pha() {
+static void pha() {
   push8(g_cpuState.m_a);
   }
 
-static inline void php() {
+static void php() {
   push8(g_cpuState.m_status | FLAG_BREAK);
   }
 
-static inline void pla() {
+static void pla() {
   g_cpuState.m_a = pull8();
 
   zerocalc(g_cpuState.m_a);
   signcalc(g_cpuState.m_a);
   }
 
-static inline void plp() {
+static void plp() {
   g_cpuState.m_status = pull8() | FLAG_CONSTANT;
   }
 
-static inline void rol() {
+static void rol() {
   value = getvalue();
   result = (value << 1) | (g_cpuState.m_status & FLAG_CARRY);
 
@@ -441,7 +441,7 @@ static inline void rol() {
   putvalue(result);
   }
 
-static inline void ror() {
+static void ror() {
   value = getvalue();
   result = (value >> 1) | ((g_cpuState.m_status & FLAG_CARRY) << 7);
 
@@ -455,18 +455,18 @@ static inline void ror() {
   putvalue(result);
   }
 
-static inline void rti() {
+static void rti() {
   g_cpuState.m_status = pull8();
   value = pull16();
   g_cpuState.m_pc = value;
   }
 
-static inline void rts() {
+static void rts() {
   value = pull16();
   g_cpuState.m_pc = value + 1;
   }
 
-static inline void sbc() {
+static void sbc() {
   value = getvalue() ^ 0x00FF;
   result = (uint16_t)g_cpuState.m_a + value + (uint16_t)(g_cpuState.m_status & FLAG_CARRY);
 
@@ -489,63 +489,63 @@ static inline void sbc() {
   saveaccum(result);
   }
 
-static inline void sec() {
+static void sec() {
   setcarry();
   }
 
-static inline void sed() {
+static void sed() {
   setdecimal();
   }
 
-static inline void sei() {
+static void sei() {
   setinterrupt();
   }
 
-static inline void sta() {
+static void sta() {
   putvalue(g_cpuState.m_a);
   }
 
-static inline void stx() {
+static void stx() {
   putvalue(g_cpuState.m_x);
   }
 
-static inline void sty() {
+static void sty() {
   putvalue(g_cpuState.m_y);
   }
 
-static inline void tax() {
+static void tax() {
   g_cpuState.m_x = g_cpuState.m_a;
 
   zerocalc(g_cpuState.m_x);
   signcalc(g_cpuState.m_x);
   }
 
-static inline void tay() {
+static void tay() {
   g_cpuState.m_y = g_cpuState.m_a;
 
   zerocalc(g_cpuState.m_y);
   signcalc(g_cpuState.m_y);
   }
 
-static inline void tsx() {
+static void tsx() {
   g_cpuState.m_x = g_cpuState.m_sp;
 
   zerocalc(g_cpuState.m_x);
   signcalc(g_cpuState.m_x);
   }
 
-static inline void txa() {
+static void txa() {
   g_cpuState.m_a = g_cpuState.m_x;
 
   zerocalc(g_cpuState.m_a);
   signcalc(g_cpuState.m_a);
   }
 
-static inline void txs() {
+static void txs() {
   g_cpuState.m_sp = g_cpuState.m_x;
   }
 
-static inline void tya() {
+static void tya() {
   g_cpuState.m_a = g_cpuState.m_y;
 
   zerocalc(g_cpuState.m_a);
