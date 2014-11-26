@@ -18,11 +18,6 @@
 #define UNDOCUMENTED //when this is defined, undocumented opcodes are handled.
 //otherwise, they're simply treated as NOPs.
 
-//#define NES_CPU      //when this is defined, the binary-coded decimal (BCD)
-//status flag is not honored by ADC and SBC. the 2A03
-//CPU in the Nintendo Entertainment System does not
-//support BCD operation.
-
 #define FLAG_CARRY     0x01
 #define FLAG_ZERO      0x02
 #define FLAG_INTERRUPT 0x04
@@ -73,12 +68,8 @@
         else clearoverflow();\
 }
 
-
-//6502 CPU registers
+// 6502 CPU registers
 CPU_STATE g_cpuState;
-
-//uint8_t status = FLAG_CONSTANT;
-
 
 //helper variables
 uint16_t oldpc, ea, reladdr, value, result;
@@ -105,9 +96,6 @@ uint16_t pull16() {
 uint8_t pull8() {
   return (cpuReadByte(BASE_STACK + ++g_cpuState.m_sp));
   }
-
-static void (*addrtable[256])();
-static void (*optable[256])();
 
 //addressing mode functions, calculates effective addresses
 static void imp() { //implied
@@ -183,19 +171,18 @@ static void indy() { // (indirect),Y
   }
 
 static uint16_t getvalue() {
-  if (addrtable[opcode] == acc)
+  if ((opcode==0x0a)||(opcode==0x2a)||(opcode==0x4a)||(opcode==0x6a))
     return((uint16_t)g_cpuState.m_a);
   else
     return((uint16_t)cpuReadByte(ea));
   }
 
 static void putvalue(uint16_t saveval) {
-  if (addrtable[opcode] == acc)
+  if ((opcode==0x0a)||(opcode==0x2a)||(opcode==0x4a)||(opcode==0x6a))
     g_cpuState.m_a = (uint8_t)(saveval & 0x00FF);
   else
     cpuWriteByte(ea, (saveval & 0x00FF));
   }
-
 
 //instruction handler functions
 static void adc() {
@@ -206,9 +193,6 @@ static void adc() {
   zerocalc(result);
   overflowcalc(result, g_cpuState.m_a, value);
   signcalc(result);
-
-#ifndef NES_CPU
-
   if (g_cpuState.m_status & FLAG_DECIMAL) {
     clearcarry();
 
@@ -220,8 +204,6 @@ static void adc() {
       setcarry();
       }
     }
-#endif
-
   saveaccum(result);
   }
 
@@ -561,9 +543,6 @@ static void sbc() {
   zerocalc(result);
   overflowcalc(result, g_cpuState.m_a, value);
   signcalc(result);
-
-#ifndef NES_CPU
-
   if (g_cpuState.m_status & FLAG_DECIMAL) {
     clearcarry();
 
@@ -576,8 +555,6 @@ static void sbc() {
       setcarry();
       }
     }
-#endif
-
   saveaccum(result);
   }
 
@@ -697,46 +674,691 @@ static void rra() {
     #define rra nop
 #endif
 
+/** Apply the addressing mode
+ *
+ * This is very ugly and inefficient but requires far less code space than a
+ * table of function pointers.
+ */
+static void applyMode(uint8_t opcode) {
+  switch(opcode) {
+    case 0x0c:
+    case 0x0d:
+    case 0x0e:
+    case 0x0f:
+    case 0x20:
+    case 0x2c:
+    case 0x2d:
+    case 0x2e:
+    case 0x2f:
+    case 0x4c:
+    case 0x4d:
+    case 0x4e:
+    case 0x4f:
+    case 0x6d:
+    case 0x6e:
+    case 0x6f:
+    case 0x8c:
+    case 0x8d:
+    case 0x8e:
+    case 0x8f:
+    case 0xac:
+    case 0xad:
+    case 0xae:
+    case 0xaf:
+    case 0xcc:
+    case 0xcd:
+    case 0xce:
+    case 0xcf:
+    case 0xec:
+    case 0xed:
+    case 0xee:
+    case 0xef:
+      abso();
+      break;
+    case 0x1c:
+    case 0x1d:
+    case 0x1e:
+    case 0x1f:
+    case 0x3c:
+    case 0x3d:
+    case 0x3e:
+    case 0x3f:
+    case 0x5c:
+    case 0x5d:
+    case 0x5e:
+    case 0x5f:
+    case 0x7c:
+    case 0x7d:
+    case 0x7e:
+    case 0x7f:
+    case 0x9c:
+    case 0x9d:
+    case 0xbc:
+    case 0xbd:
+    case 0xdc:
+    case 0xdd:
+    case 0xde:
+    case 0xdf:
+    case 0xfc:
+    case 0xfd:
+    case 0xfe:
+    case 0xff:
+      absx();
+      break;
+    case 0x19:
+    case 0x1b:
+    case 0x39:
+    case 0x3b:
+    case 0x59:
+    case 0x5b:
+    case 0x79:
+    case 0x7b:
+    case 0x99:
+    case 0x9b:
+    case 0x9e:
+    case 0x9f:
+    case 0xb9:
+    case 0xbb:
+    case 0xbe:
+    case 0xbf:
+    case 0xd9:
+    case 0xdb:
+    case 0xf9:
+    case 0xfb:
+      absy();
+      break;
+    case 0x0a:
+    case 0x2a:
+    case 0x4a:
+    case 0x6a:
+      acc();
+      break;
+    case 0x09:
+    case 0x0b:
+    case 0x29:
+    case 0x2b:
+    case 0x49:
+    case 0x4b:
+    case 0x69:
+    case 0x6b:
+    case 0x80:
+    case 0x82:
+    case 0x89:
+    case 0x8b:
+    case 0xa0:
+    case 0xa2:
+    case 0xa9:
+    case 0xab:
+    case 0xc0:
+    case 0xc2:
+    case 0xc9:
+    case 0xcb:
+    case 0xe0:
+    case 0xe2:
+    case 0xe9:
+    case 0xeb:
+      imm();
+      break;
+    case 0x00:
+    case 0x02:
+    case 0x08:
+    case 0x12:
+    case 0x18:
+    case 0x1a:
+    case 0x22:
+    case 0x28:
+    case 0x32:
+    case 0x38:
+    case 0x3a:
+    case 0x40:
+    case 0x42:
+    case 0x48:
+    case 0x52:
+    case 0x58:
+    case 0x5a:
+    case 0x60:
+    case 0x62:
+    case 0x68:
+    case 0x72:
+    case 0x78:
+    case 0x7a:
+    case 0x88:
+    case 0x8a:
+    case 0x92:
+    case 0x98:
+    case 0x9a:
+    case 0xa8:
+    case 0xaa:
+    case 0xb2:
+    case 0xb8:
+    case 0xba:
+    case 0xc8:
+    case 0xca:
+    case 0xd2:
+    case 0xd8:
+    case 0xda:
+    case 0xe8:
+    case 0xea:
+    case 0xf2:
+    case 0xf8:
+    case 0xfa:
+      imp();
+      break;
+    case 0x6c:
+      ind();
+      break;
+    case 0x01:
+    case 0x03:
+    case 0x21:
+    case 0x23:
+    case 0x41:
+    case 0x43:
+    case 0x61:
+    case 0x63:
+    case 0x81:
+    case 0x83:
+    case 0xa1:
+    case 0xa3:
+    case 0xc1:
+    case 0xc3:
+    case 0xe1:
+    case 0xe3:
+      indx();
+      break;
+    case 0x11:
+    case 0x13:
+    case 0x31:
+    case 0x33:
+    case 0x51:
+    case 0x53:
+    case 0x71:
+    case 0x73:
+    case 0x91:
+    case 0x93:
+    case 0xb1:
+    case 0xb3:
+    case 0xd1:
+    case 0xd3:
+    case 0xf1:
+    case 0xf3:
+      indy();
+      break;
+    case 0x10:
+    case 0x30:
+    case 0x50:
+    case 0x70:
+    case 0x90:
+    case 0xb0:
+    case 0xd0:
+    case 0xf0:
+      rel();
+      break;
+    case 0x04:
+    case 0x05:
+    case 0x06:
+    case 0x07:
+    case 0x24:
+    case 0x25:
+    case 0x26:
+    case 0x27:
+    case 0x44:
+    case 0x45:
+    case 0x46:
+    case 0x47:
+    case 0x64:
+    case 0x65:
+    case 0x66:
+    case 0x67:
+    case 0x84:
+    case 0x85:
+    case 0x86:
+    case 0x87:
+    case 0xa4:
+    case 0xa5:
+    case 0xa6:
+    case 0xa7:
+    case 0xc4:
+    case 0xc5:
+    case 0xc6:
+    case 0xc7:
+    case 0xe4:
+    case 0xe5:
+    case 0xe6:
+    case 0xe7:
+      zp();
+      break;
+    case 0x14:
+    case 0x15:
+    case 0x16:
+    case 0x17:
+    case 0x34:
+    case 0x35:
+    case 0x36:
+    case 0x37:
+    case 0x54:
+    case 0x55:
+    case 0x56:
+    case 0x57:
+    case 0x74:
+    case 0x75:
+    case 0x76:
+    case 0x77:
+    case 0x94:
+    case 0x95:
+    case 0xb4:
+    case 0xb5:
+    case 0xd4:
+    case 0xd5:
+    case 0xd6:
+    case 0xd7:
+    case 0xf4:
+    case 0xf5:
+    case 0xf6:
+    case 0xf7:
+      zpx();
+      break;
+    case 0x96:
+    case 0x97:
+    case 0xb6:
+    case 0xb7:
+      zpy();
+      break;
+    }
+  }
 
-static void (*addrtable[256])() = {
-  /*        |  0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  A  |  B  |  C  |  D  |  E  |  F  |     */
-  /* 0 */     imp, indx,  imp, indx,   zp,   zp,   zp,   zp,  imp,  imm,  acc,  imm, abso, abso, abso, abso, /* 0 */
-  /* 1 */     rel, indy,  imp, indy,  zpx,  zpx,  zpx,  zpx,  imp, absy,  imp, absy, absx, absx, absx, absx, /* 1 */
-  /* 2 */    abso, indx,  imp, indx,   zp,   zp,   zp,   zp,  imp,  imm,  acc,  imm, abso, abso, abso, abso, /* 2 */
-  /* 3 */     rel, indy,  imp, indy,  zpx,  zpx,  zpx,  zpx,  imp, absy,  imp, absy, absx, absx, absx, absx, /* 3 */
-  /* 4 */     imp, indx,  imp, indx,   zp,   zp,   zp,   zp,  imp,  imm,  acc,  imm, abso, abso, abso, abso, /* 4 */
-  /* 5 */     rel, indy,  imp, indy,  zpx,  zpx,  zpx,  zpx,  imp, absy,  imp, absy, absx, absx, absx, absx, /* 5 */
-  /* 6 */     imp, indx,  imp, indx,   zp,   zp,   zp,   zp,  imp,  imm,  acc,  imm,  ind, abso, abso, abso, /* 6 */
-  /* 7 */     rel, indy,  imp, indy,  zpx,  zpx,  zpx,  zpx,  imp, absy,  imp, absy, absx, absx, absx, absx, /* 7 */
-  /* 8 */     imm, indx,  imm, indx,   zp,   zp,   zp,   zp,  imp,  imm,  imp,  imm, abso, abso, abso, abso, /* 8 */
-  /* 9 */     rel, indy,  imp, indy,  zpx,  zpx,  zpy,  zpy,  imp, absy,  imp, absy, absx, absx, absy, absy, /* 9 */
-  /* A */     imm, indx,  imm, indx,   zp,   zp,   zp,   zp,  imp,  imm,  imp,  imm, abso, abso, abso, abso, /* A */
-  /* B */     rel, indy,  imp, indy,  zpx,  zpx,  zpy,  zpy,  imp, absy,  imp, absy, absx, absx, absy, absy, /* B */
-  /* C */     imm, indx,  imm, indx,   zp,   zp,   zp,   zp,  imp,  imm,  imp,  imm, abso, abso, abso, abso, /* C */
-  /* D */     rel, indy,  imp, indy,  zpx,  zpx,  zpx,  zpx,  imp, absy,  imp, absy, absx, absx, absx, absx, /* D */
-  /* E */     imm, indx,  imm, indx,   zp,   zp,   zp,   zp,  imp,  imm,  imp,  imm, abso, abso, abso, abso, /* E */
-  /* F */     rel, indy,  imp, indy,  zpx,  zpx,  zpx,  zpx,  imp, absy,  imp, absy, absx, absx, absx, absx  /* F */
-  };
-
-static void (*optable[256])() = {
-  /*        |  0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  A  |  B  |  C  |  D  |  E  |  F  |      */
-  /* 0 */      brk,  ora,  nop,  slo,  nop,  ora,  asl,  slo,  php,  ora,  asl,  nop,  nop,  ora,  asl,  slo, /* 0 */
-  /* 1 */      bpl,  ora,  nop,  slo,  nop,  ora,  asl,  slo,  clc,  ora,  nop,  slo,  nop,  ora,  asl,  slo, /* 1 */
-  /* 2 */      jsr,  and,  nop,  rla,  bit,  and,  rol,  rla,  plp,  and,  rol,  nop,  bit,  and,  rol,  rla, /* 2 */
-  /* 3 */      bmi,  and,  nop,  rla,  nop,  and,  rol,  rla,  sec,  and,  nop,  rla,  nop,  and,  rol,  rla, /* 3 */
-  /* 4 */      rti,  eor,  nop,  sre,  nop,  eor,  lsr,  sre,  pha,  eor,  lsr,  nop,  jmp,  eor,  lsr,  sre, /* 4 */
-  /* 5 */      bvc,  eor,  nop,  sre,  nop,  eor,  lsr,  sre,  cli,  eor,  nop,  sre,  nop,  eor,  lsr,  sre, /* 5 */
-  /* 6 */      rts,  adc,  nop,  rra,  nop,  adc,  ror,  rra,  pla,  adc,  ror,  nop,  jmp,  adc,  ror,  rra, /* 6 */
-  /* 7 */      bvs,  adc,  nop,  rra,  nop,  adc,  ror,  rra,  sei,  adc,  nop,  rra,  nop,  adc,  ror,  rra, /* 7 */
-  /* 8 */      nop,  sta,  nop,  sax,  sty,  sta,  stx,  sax,  dey,  nop,  txa,  nop,  sty,  sta,  stx,  sax, /* 8 */
-  /* 9 */      bcc,  sta,  nop,  nop,  sty,  sta,  stx,  sax,  tya,  sta,  txs,  nop,  nop,  sta,  nop,  nop, /* 9 */
-  /* A */      ldy,  lda,  ldx,  lax,  ldy,  lda,  ldx,  lax,  tay,  lda,  tax,  nop,  ldy,  lda,  ldx,  lax, /* A */
-  /* B */      bcs,  lda,  nop,  lax,  ldy,  lda,  ldx,  lax,  clv,  lda,  tsx,  lax,  ldy,  lda,  ldx,  lax, /* B */
-  /* C */      cpy,  cmp,  nop,  dcp,  cpy,  cmp,  dec,  dcp,  iny,  cmp,  dex,  nop,  cpy,  cmp,  dec,  dcp, /* C */
-  /* D */      bne,  cmp,  nop,  dcp,  nop,  cmp,  dec,  dcp,  cld,  cmp,  nop,  dcp,  nop,  cmp,  dec,  dcp, /* D */
-  /* E */      cpx,  sbc,  nop,  isb,  cpx,  sbc,  inc,  isb,  inx,  sbc,  nop,  sbc,  cpx,  sbc,  inc,  isb, /* E */
-  /* F */      beq,  sbc,  nop,  isb,  nop,  sbc,  inc,  isb,  sed,  sbc,  nop,  isb,  nop,  sbc,  inc,  isb  /* F */
-  };
+/** Apply the opcode
+ *
+ * This is very ugly and inefficient but requires far less code space than a
+ * table of function pointers.
+ */
+static void applyOpcode(uint8_t opcode) {
+  switch(opcode) {
+    case 0x61:
+    case 0x65:
+    case 0x69:
+    case 0x6d:
+    case 0x71:
+    case 0x75:
+    case 0x79:
+    case 0x7d:
+      adc();
+      break;
+    case 0x21:
+    case 0x25:
+    case 0x29:
+    case 0x2d:
+    case 0x31:
+    case 0x35:
+    case 0x39:
+    case 0x3d:
+      and();
+      break;
+    case 0x06:
+    case 0x0a:
+    case 0x0e:
+    case 0x16:
+    case 0x1e:
+      asl();
+      break;
+    case 0x90:
+      bcc();
+      break;
+    case 0xb0:
+      bcs();
+      break;
+    case 0xf0:
+      beq();
+      break;
+    case 0x24:
+    case 0x2c:
+      bit();
+      break;
+    case 0x30:
+      bmi();
+      break;
+    case 0xd0:
+      bne();
+      break;
+    case 0x10:
+      bpl();
+      break;
+    case 0x00:
+      brk();
+      break;
+    case 0x50:
+      bvc();
+      break;
+    case 0x70:
+      bvs();
+      break;
+    case 0x18:
+      clc();
+      break;
+    case 0xd8:
+      cld();
+      break;
+    case 0x58:
+      cli();
+      break;
+    case 0xb8:
+      clv();
+      break;
+    case 0xc1:
+    case 0xc5:
+    case 0xc9:
+    case 0xcd:
+    case 0xd1:
+    case 0xd5:
+    case 0xd9:
+    case 0xdd:
+      cmp();
+      break;
+    case 0xe0:
+    case 0xe4:
+    case 0xec:
+      cpx();
+      break;
+    case 0xc0:
+    case 0xc4:
+    case 0xcc:
+      cpy();
+      break;
+    case 0xc3:
+    case 0xc7:
+    case 0xcf:
+    case 0xd3:
+    case 0xd7:
+    case 0xdb:
+    case 0xdf:
+      dcp();
+      break;
+    case 0xc6:
+    case 0xce:
+    case 0xd6:
+    case 0xde:
+      dec();
+      break;
+    case 0xca:
+      dex();
+      break;
+    case 0x88:
+      dey();
+      break;
+    case 0x41:
+    case 0x45:
+    case 0x49:
+    case 0x4d:
+    case 0x51:
+    case 0x55:
+    case 0x59:
+    case 0x5d:
+      eor();
+      break;
+    case 0xe6:
+    case 0xee:
+    case 0xf6:
+    case 0xfe:
+      inc();
+      break;
+    case 0xe8:
+      inx();
+      break;
+    case 0xc8:
+      iny();
+      break;
+    case 0xe3:
+    case 0xe7:
+    case 0xef:
+    case 0xf3:
+    case 0xf7:
+    case 0xfb:
+    case 0xff:
+      isb();
+      break;
+    case 0x4c:
+    case 0x6c:
+      jmp();
+      break;
+    case 0x20:
+      jsr();
+      break;
+    case 0xa3:
+    case 0xa7:
+    case 0xaf:
+    case 0xb3:
+    case 0xb7:
+    case 0xbb:
+    case 0xbf:
+      lax();
+      break;
+    case 0xa1:
+    case 0xa5:
+    case 0xa9:
+    case 0xad:
+    case 0xb1:
+    case 0xb5:
+    case 0xb9:
+    case 0xbd:
+      lda();
+      break;
+    case 0xa2:
+    case 0xa6:
+    case 0xae:
+    case 0xb6:
+    case 0xbe:
+      ldx();
+      break;
+    case 0xa0:
+    case 0xa4:
+    case 0xac:
+    case 0xb4:
+    case 0xbc:
+      ldy();
+      break;
+    case 0x46:
+    case 0x4a:
+    case 0x4e:
+    case 0x56:
+    case 0x5e:
+      lsr();
+      break;
+    case 0x02:
+    case 0x04:
+    case 0x0b:
+    case 0x0c:
+    case 0x12:
+    case 0x14:
+    case 0x1a:
+    case 0x1c:
+    case 0x22:
+    case 0x2b:
+    case 0x32:
+    case 0x34:
+    case 0x3a:
+    case 0x3c:
+    case 0x42:
+    case 0x44:
+    case 0x4b:
+    case 0x52:
+    case 0x54:
+    case 0x5a:
+    case 0x5c:
+    case 0x62:
+    case 0x64:
+    case 0x6b:
+    case 0x72:
+    case 0x74:
+    case 0x7a:
+    case 0x7c:
+    case 0x80:
+    case 0x82:
+    case 0x89:
+    case 0x8b:
+    case 0x92:
+    case 0x93:
+    case 0x9b:
+    case 0x9c:
+    case 0x9e:
+    case 0x9f:
+    case 0xab:
+    case 0xb2:
+    case 0xc2:
+    case 0xcb:
+    case 0xd2:
+    case 0xd4:
+    case 0xda:
+    case 0xdc:
+    case 0xe2:
+    case 0xea:
+    case 0xf2:
+    case 0xf4:
+    case 0xfa:
+    case 0xfc:
+      nop();
+      break;
+    case 0x01:
+    case 0x05:
+    case 0x09:
+    case 0x0d:
+    case 0x11:
+    case 0x15:
+    case 0x19:
+    case 0x1d:
+      ora();
+      break;
+    case 0x48:
+      pha();
+      break;
+    case 0x08:
+      php();
+      break;
+    case 0x68:
+      pla();
+      break;
+    case 0x28:
+      plp();
+      break;
+    case 0x23:
+    case 0x27:
+    case 0x2f:
+    case 0x33:
+    case 0x37:
+    case 0x3b:
+    case 0x3f:
+      rla();
+      break;
+    case 0x26:
+    case 0x2a:
+    case 0x2e:
+    case 0x36:
+    case 0x3e:
+      rol();
+      break;
+    case 0x66:
+    case 0x6a:
+    case 0x6e:
+    case 0x76:
+    case 0x7e:
+      ror();
+      break;
+    case 0x63:
+    case 0x67:
+    case 0x6f:
+    case 0x73:
+    case 0x77:
+    case 0x7b:
+    case 0x7f:
+      rra();
+      break;
+    case 0x40:
+      rti();
+      break;
+    case 0x60:
+      rts();
+      break;
+    case 0x83:
+    case 0x87:
+    case 0x8f:
+    case 0x97:
+      sax();
+      break;
+    case 0xe1:
+    case 0xe5:
+    case 0xe9:
+    case 0xeb:
+    case 0xed:
+    case 0xf1:
+    case 0xf5:
+    case 0xf9:
+    case 0xfd:
+      sbc();
+      break;
+    case 0x38:
+      sec();
+      break;
+    case 0xf8:
+      sed();
+      break;
+    case 0x78:
+      sei();
+      break;
+    case 0x03:
+    case 0x07:
+    case 0x0f:
+    case 0x13:
+    case 0x17:
+    case 0x1b:
+    case 0x1f:
+      slo();
+      break;
+    case 0x43:
+    case 0x47:
+    case 0x4f:
+    case 0x53:
+    case 0x57:
+    case 0x5b:
+    case 0x5f:
+      sre();
+      break;
+    case 0x81:
+    case 0x85:
+    case 0x8d:
+    case 0x91:
+    case 0x95:
+    case 0x99:
+    case 0x9d:
+      sta();
+      break;
+    case 0x86:
+    case 0x8e:
+    case 0x96:
+      stx();
+      break;
+    case 0x84:
+    case 0x8c:
+    case 0x94:
+      sty();
+      break;
+    case 0xaa:
+      tax();
+      break;
+    case 0xa8:
+      tay();
+      break;
+    case 0xba:
+      tsx();
+      break;
+    case 0x8a:
+      txa();
+      break;
+    case 0x9a:
+      txs();
+      break;
+    case 0x98:
+      tya();
+      break;
+    }
+  }
 
 void nmi6502() {
   push16(g_cpuState.m_pc);
@@ -763,6 +1385,6 @@ void cpuReset() {
 
 void cpuStep() {
   opcode = cpuReadByte(g_cpuState.m_pc++);
-  (*addrtable[opcode])();
-  (*optable[opcode])();
+  applyMode(opcode);
+  applyOpcode(opcode);
   }
