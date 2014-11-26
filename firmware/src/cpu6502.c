@@ -78,8 +78,8 @@ static void carrycalc(uint16_t n) {
 CPU_STATE g_cpuState;
 
 //helper variables
-uint16_t oldpc, ea, reladdr, value, result;
-uint8_t opcode, oldstatus;
+static uint8_t opcode; //!< Current opcode
+static uint16_t ea;    //!< Current effective address
 
 //a few general functions used by various other functions
 static void push16(uint16_t pushval) {
@@ -280,14 +280,18 @@ static uint8_t g_OPCODE[] = {
   OPCODE_SED, OPCODE_SBC, OPCODE_NOP, OPCODE_ISB, OPCODE_NOP, OPCODE_SBC, OPCODE_INC, OPCODE_ISB
   };
 
-/** Apply the addressing mode
+
+/** Execute a single 6502 instruction
  *
- * This is very ugly and inefficient but requires far less code space than a
- * table of function pointers.
+ * This single massive function makes up the bulk of the emulator core. The
+ * original source was much nicer but as part of the space saving optimisations
+ * I had to move everything into here.
  */
-static void applyMode(uint8_t opcode) {
-  uint16_t eahelp, eahelp2;
+void cpuStep() {
+  uint16_t eahelp, eahelp2, oldpc, reladdr, value, result;
+  opcode = cpuReadByte(g_cpuState.m_pc++);
   uint8_t id = g_MODE[opcode];
+  // Apply the addressing mode
   switch(id) {
     case MODE_ABSO:
       ea = (uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8);
@@ -337,15 +341,8 @@ static void applyMode(uint8_t opcode) {
       ea = ((uint16_t)cpuReadByte((uint16_t)g_cpuState.m_pc++) + (uint16_t)g_cpuState.m_y) & 0xFF; //zero-page wraparound
       break;
     }
-  }
-
-/** Apply the opcode
- *
- * This is very ugly and inefficient but requires far less code space than a
- * table of function pointers.
- */
-static void applyOpcode(uint8_t opcode) {
-  uint8_t id = g_OPCODE[opcode];
+  // Execute the opcode
+  id = g_OPCODE[opcode];
   switch(id) {
     case OPCODE_ADC:
       value = getvalue();
@@ -712,8 +709,4 @@ void cpuReset() {
   g_cpuState.m_status |= FLAG_CONSTANT;
   }
 
-void cpuStep() {
-  opcode = cpuReadByte(g_cpuState.m_pc++);
-  applyMode(opcode);
-  applyOpcode(opcode);
-  }
+
