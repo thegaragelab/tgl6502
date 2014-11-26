@@ -48,21 +48,21 @@
 
 
 //flag calculation macros
-static void zerocalc(uint8_t n) {
+static void zerocalc(uint16_t n) {
   if ((n) & 0x00FF)
     clearzero();
   else
     setzero();
   }
 
-static void signcalc(uint8_t n) {
+static void signcalc(uint16_t n) {
   if ((n) & 0x0080)
     setsign();
   else
     clearsign();
   }
 
-static void carrycalc(uint8_t n) {
+static void carrycalc(uint16_t n) {
   if ((n) & 0xFF00)
     setcarry();
   else
