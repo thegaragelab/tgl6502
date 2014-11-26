@@ -104,71 +104,6 @@ static uint8_t pull8() {
   }
 
 //addressing mode functions, calculates effective addresses
-static inline void imm() { //immediate
-  ea = g_cpuState.m_pc++;
-  }
-
-static inline void zp() { //zero-page
-  ea = (uint16_t)cpuReadByte((uint16_t)g_cpuState.m_pc++);
-  }
-
-static inline void zpx() { //zero-page,X
-  ea = ((uint16_t)cpuReadByte((uint16_t)g_cpuState.m_pc++) + (uint16_t)g_cpuState.m_x) & 0xFF; //zero-page wraparound
-  }
-
-static inline void zpy() { //zero-page,Y
-  ea = ((uint16_t)cpuReadByte((uint16_t)g_cpuState.m_pc++) + (uint16_t)g_cpuState.m_y) & 0xFF; //zero-page wraparound
-  }
-
-static inline void rel() { //relative for branch ops (8-bit immediate value, sign-extended)
-  reladdr = (uint16_t)cpuReadByte(g_cpuState.m_pc++);
-  if (reladdr & 0x80)
-    reladdr |= 0xFF00;
-  }
-
-static inline void abso() { //absolute
-  ea = (uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8);
-  g_cpuState.m_pc += 2;
-  }
-
-static inline void absx() { //absolute,X
-  uint16_t startpage;
-  ea = ((uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8));
-  startpage = ea & 0xFF00;
-  ea += (uint16_t)g_cpuState.m_x;
-  g_cpuState.m_pc += 2;
-  }
-
-static inline void absy() { //absolute,Y
-  uint16_t startpage;
-  ea = ((uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8));
-  startpage = ea & 0xFF00;
-  ea += (uint16_t)g_cpuState.m_y;
-  g_cpuState.m_pc += 2;
-  }
-
-static inline void ind() { //indirect
-  uint16_t eahelp, eahelp2;
-  eahelp = (uint16_t)cpuReadByte(g_cpuState.m_pc) | (uint16_t)((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8);
-  eahelp2 = (eahelp & 0xFF00) | ((eahelp + 1) & 0x00FF); //replicate 6502 page-boundary wraparound bug
-  ea = (uint16_t)cpuReadByte(eahelp) | ((uint16_t)cpuReadByte(eahelp2) << 8);
-  g_cpuState.m_pc += 2;
-  }
-
-static inline void indx() { // (indirect,X)
-  uint16_t eahelp;
-  eahelp = (uint16_t)(((uint16_t)cpuReadByte(g_cpuState.m_pc++) + (uint16_t)g_cpuState.m_x) & 0xFF); //zero-page wraparound for table pointer
-  ea = (uint16_t)cpuReadByte(eahelp & 0x00FF) | ((uint16_t)cpuReadByte((eahelp+1) & 0x00FF) << 8);
-  }
-
-static inline void indy() { // (indirect),Y
-  uint16_t eahelp, eahelp2, startpage;
-  eahelp = (uint16_t)cpuReadByte(g_cpuState.m_pc++);
-  eahelp2 = (eahelp & 0xFF00) | ((eahelp + 1) & 0x00FF); //zero-page wraparound
-  ea = (uint16_t)cpuReadByte(eahelp) | ((uint16_t)cpuReadByte(eahelp2) << 8);
-  startpage = ea & 0xFF00;
-  ea += (uint16_t)g_cpuState.m_y;
-  }
 
 static uint16_t getvalue() {
   if ((opcode==0x0a)||(opcode==0x2a)||(opcode==0x4a)||(opcode==0x6a))
@@ -617,48 +552,6 @@ static inline void tya() {
   signcalc(g_cpuState.m_a);
   }
 
-//undocumented instructions
-static inline void lax() {
-  lda();
-  ldx();
-  }
-
-static inline void sax() {
-  sta();
-  stx();
-  putvalue(g_cpuState.m_a & g_cpuState.m_x);
-  }
-
-static inline void dcp() {
-  dec();
-  cmp();
-  }
-
-static inline void isb() {
-  inc();
-  sbc();
-  }
-
-static inline void slo() {
-  asl();
-  ora();
-  }
-
-static inline void rla() {
-  rol();
-  and();
-  }
-
-static inline void sre() {
-  lsr();
-  eor();
-  }
-
-static inline void rra() {
-  ror();
-  adc();
-  }
-
 /* Address mapping */
 typedef enum {
   MODE_ABSO,
@@ -820,19 +713,56 @@ static uint8_t g_OPCODE[] = {
  * table of function pointers.
  */
 static void applyMode(uint8_t opcode) {
+  uint16_t eahelp, eahelp2;
   uint8_t id = g_MODE[opcode];
   switch(id) {
-    case MODE_ABSO: abso(); break;
-    case MODE_ABSX: absx(); break;
-    case MODE_ABSY: absy(); break;
-    case MODE_IMM: imm(); break;
-    case MODE_IND: ind(); break;
-    case MODE_INDX: indx(); break;
-    case MODE_INDY: indy(); break;
-    case MODE_REL: rel(); break;
-    case MODE_ZP: zp(); break;
-    case MODE_ZPX: zpx(); break;
-    case MODE_ZPY: zpy(); break;
+    case MODE_ABSO:
+      ea = (uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8);
+      g_cpuState.m_pc += 2;
+      break;
+    case MODE_ABSX:
+      ea = ((uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8));
+      ea += (uint16_t)g_cpuState.m_x;
+      g_cpuState.m_pc += 2;
+      break;
+    case MODE_ABSY:
+      ea = ((uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8));
+      ea += (uint16_t)g_cpuState.m_y;
+      g_cpuState.m_pc += 2;
+      break;
+    case MODE_IMM:
+      ea = g_cpuState.m_pc++;
+      break;
+    case MODE_IND:
+      eahelp = (uint16_t)cpuReadByte(g_cpuState.m_pc) | (uint16_t)((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8);
+      eahelp2 = (eahelp & 0xFF00) | ((eahelp + 1) & 0x00FF); //replicate 6502 page-boundary wraparound bug
+      ea = (uint16_t)cpuReadByte(eahelp) | ((uint16_t)cpuReadByte(eahelp2) << 8);
+      g_cpuState.m_pc += 2;
+      break;
+    case MODE_INDX:
+      eahelp = (uint16_t)(((uint16_t)cpuReadByte(g_cpuState.m_pc++) + (uint16_t)g_cpuState.m_x) & 0xFF); //zero-page wraparound for table pointer
+      ea = (uint16_t)cpuReadByte(eahelp & 0x00FF) | ((uint16_t)cpuReadByte((eahelp+1) & 0x00FF) << 8);
+      break;
+    case MODE_INDY:
+      eahelp = (uint16_t)cpuReadByte(g_cpuState.m_pc++);
+      eahelp2 = (eahelp & 0xFF00) | ((eahelp + 1) & 0x00FF); //zero-page wraparound
+      ea = (uint16_t)cpuReadByte(eahelp) | ((uint16_t)cpuReadByte(eahelp2) << 8);
+      ea += (uint16_t)g_cpuState.m_y;
+      break;
+    case MODE_REL:
+      reladdr = (uint16_t)cpuReadByte(g_cpuState.m_pc++);
+      if (reladdr & 0x80)
+        reladdr |= 0xFF00;
+      break;
+    case MODE_ZP:
+      ea = (uint16_t)cpuReadByte((uint16_t)g_cpuState.m_pc++);
+      break;
+    case MODE_ZPX:
+      ea = ((uint16_t)cpuReadByte((uint16_t)g_cpuState.m_pc++) + (uint16_t)g_cpuState.m_x) & 0xFF; //zero-page wraparound
+      break;
+    case MODE_ZPY:
+      ea = ((uint16_t)cpuReadByte((uint16_t)g_cpuState.m_pc++) + (uint16_t)g_cpuState.m_y) & 0xFF; //zero-page wraparound
+      break;
     }
   }
 
@@ -864,7 +794,6 @@ static void applyOpcode(uint8_t opcode) {
     case OPCODE_CMP: cmp(); break;
     case OPCODE_CPX: cpx(); break;
     case OPCODE_CPY: cpy(); break;
-    case OPCODE_DCP: dcp(); break;
     case OPCODE_DEC: dec(); break;
     case OPCODE_DEX: dex(); break;
     case OPCODE_DEY: dey(); break;
@@ -872,10 +801,8 @@ static void applyOpcode(uint8_t opcode) {
     case OPCODE_INC: inc(); break;
     case OPCODE_INX: inx(); break;
     case OPCODE_INY: iny(); break;
-    case OPCODE_ISB: isb(); break;
     case OPCODE_JMP: jmp(); break;
     case OPCODE_JSR: jsr(); break;
-    case OPCODE_LAX: lax(); break;
     case OPCODE_LDA: lda(); break;
     case OPCODE_LDX: ldx(); break;
     case OPCODE_LDY: ldy(); break;
@@ -885,19 +812,14 @@ static void applyOpcode(uint8_t opcode) {
     case OPCODE_PHP: php(); break;
     case OPCODE_PLA: pla(); break;
     case OPCODE_PLP: plp(); break;
-    case OPCODE_RLA: rla(); break;
     case OPCODE_ROL: rol(); break;
     case OPCODE_ROR: ror(); break;
-    case OPCODE_RRA: rra(); break;
     case OPCODE_RTI: rti(); break;
     case OPCODE_RTS: rts(); break;
-    case OPCODE_SAX: sax(); break;
     case OPCODE_SBC: sbc(); break;
     case OPCODE_SEC: sec(); break;
     case OPCODE_SED: sed(); break;
     case OPCODE_SEI: sei(); break;
-    case OPCODE_SLO: slo(); break;
-    case OPCODE_SRE: sre(); break;
     case OPCODE_STA: sta(); break;
     case OPCODE_STX: stx(); break;
     case OPCODE_STY: sty(); break;
