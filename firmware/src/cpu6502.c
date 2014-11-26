@@ -120,437 +120,10 @@ static void putvalue(uint16_t saveval) {
   }
 
 //instruction handler functions
-static void adc() {
-  value = getvalue();
-  result = (uint16_t)g_cpuState.m_a + value + (uint16_t)(g_cpuState.m_status & FLAG_CARRY);
 
-  carrycalc(result);
-  zerocalc(result);
-  overflowcalc(result, g_cpuState.m_a, value);
-  signcalc(result);
-  if (g_cpuState.m_status & FLAG_DECIMAL) {
-    clearcarry();
 
-    if ((g_cpuState.m_a & 0x0F) > 0x09) {
-      g_cpuState.m_a += 0x06;
-      }
-    if ((g_cpuState.m_a & 0xF0) > 0x90) {
-      g_cpuState.m_a += 0x60;
-      setcarry();
-      }
-    }
-  saveaccum(result);
-  }
 
-static void and() {
-  value = getvalue();
-  result = (uint16_t)g_cpuState.m_a & value;
 
-  zerocalc(result);
-  signcalc(result);
-
-  saveaccum(result);
-  }
-
-static void asl() {
-  value = getvalue();
-  result = value << 1;
-
-  carrycalc(result);
-  zerocalc(result);
-  signcalc(result);
-
-  putvalue(result);
-  }
-
-static void bcc() {
-  if ((g_cpuState.m_status & FLAG_CARRY) == 0) {
-    oldpc =g_cpuState.m_pc;
-    g_cpuState.m_pc += reladdr;
-    }
-  }
-
-static void bcs() {
-  if ((g_cpuState.m_status & FLAG_CARRY) == FLAG_CARRY) {
-    oldpc =g_cpuState.m_pc;
-    g_cpuState.m_pc += reladdr;
-    }
-  }
-
-static void beq() {
-  if ((g_cpuState.m_status & FLAG_ZERO) == FLAG_ZERO) {
-    oldpc =g_cpuState.m_pc;
-    g_cpuState.m_pc += reladdr;
-    }
-  }
-
-static void bit() {
-  value = getvalue();
-  result = (uint16_t)g_cpuState.m_a & value;
-
-  zerocalc(result);
-  g_cpuState.m_status = (g_cpuState.m_status & 0x3F) | (uint8_t)(value & 0xC0);
-  }
-
-static void bmi() {
-  if ((g_cpuState.m_status & FLAG_SIGN) == FLAG_SIGN) {
-    oldpc =g_cpuState.m_pc;
-    g_cpuState.m_pc += reladdr;
-    }
-  }
-
-static void bne() {
-  if ((g_cpuState.m_status & FLAG_ZERO) == 0) {
-    oldpc =g_cpuState.m_pc;
-    g_cpuState.m_pc += reladdr;
-    }
-  }
-
-static void bpl() {
-  if ((g_cpuState.m_status & FLAG_SIGN) == 0) {
-    oldpc =g_cpuState.m_pc;
-    g_cpuState.m_pc += reladdr;
-    }
-  }
-
-static void brk() {
-  g_cpuState.m_pc++;
-  push16(g_cpuState.m_pc); //push next instruction address onto stack
-  push8(g_cpuState.m_status | FLAG_BREAK); //push CPU status to stack
-  setinterrupt(); //set interrupt flag
-  g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
-  }
-
-static void bvc() {
-  if ((g_cpuState.m_status & FLAG_OVERFLOW) == 0) {
-    oldpc =g_cpuState.m_pc;
-    g_cpuState.m_pc += reladdr;
-    }
-  }
-
-static void bvs() {
-  if ((g_cpuState.m_status & FLAG_OVERFLOW) == FLAG_OVERFLOW) {
-    oldpc =g_cpuState.m_pc;
-    g_cpuState.m_pc += reladdr;
-    }
-  }
-
-static void clc() {
-  clearcarry();
-  }
-
-static void cld() {
-  cleardecimal();
-  }
-
-static void cli() {
-  clearinterrupt();
-  }
-
-static void clv() {
-  clearoverflow();
-  }
-
-static void cmp() {
-  value = getvalue();
-  result = (uint16_t)g_cpuState.m_a - value;
-
-  if (g_cpuState.m_a >= (uint8_t)(value & 0x00FF))
-    setcarry();
-  else
-    clearcarry();
-  if (g_cpuState.m_a == (uint8_t)(value & 0x00FF))
-    setzero();
-  else
-    clearzero();
-  signcalc(result);
-  }
-
-static void cpx() {
-  value = getvalue();
-  result = (uint16_t)g_cpuState.m_x - value;
-
-  if (g_cpuState.m_x >= (uint8_t)(value & 0x00FF))
-    setcarry();
-  else
-    clearcarry();
-  if (g_cpuState.m_x == (uint8_t)(value & 0x00FF))
-    setzero();
-  else
-    clearzero();
-  signcalc(result);
-  }
-
-static void cpy() {
-  value = getvalue();
-  result = (uint16_t)g_cpuState.m_y - value;
-
-  if (g_cpuState.m_y >= (uint8_t)(value & 0x00FF))
-    setcarry();
-  else
-    clearcarry();
-  if (g_cpuState.m_y == (uint8_t)(value & 0x00FF))
-    setzero();
-  else
-    clearzero();
-  signcalc(result);
-  }
-
-static void dec() {
-  value = getvalue();
-  result = value - 1;
-
-  zerocalc(result);
-  signcalc(result);
-
-  putvalue(result);
-  }
-
-static void dex() {
-  g_cpuState.m_x--;
-
-  zerocalc(g_cpuState.m_x);
-  signcalc(g_cpuState.m_x);
-  }
-
-static void dey() {
-  g_cpuState.m_y--;
-
-  zerocalc(g_cpuState.m_y);
-  signcalc(g_cpuState.m_y);
-  }
-
-static void eor() {
-  value = getvalue();
-  result = (uint16_t)g_cpuState.m_a ^ value;
-
-  zerocalc(result);
-  signcalc(result);
-
-  saveaccum(result);
-  }
-
-static void inc() {
-  value = getvalue();
-  result = value + 1;
-
-  zerocalc(result);
-  signcalc(result);
-
-  putvalue(result);
-  }
-
-static void inx() {
-  g_cpuState.m_x++;
-
-  zerocalc(g_cpuState.m_x);
-  signcalc(g_cpuState.m_x);
-  }
-
-static void iny() {
-  g_cpuState.m_y++;
-
-  zerocalc(g_cpuState.m_y);
-  signcalc(g_cpuState.m_y);
-  }
-
-static void jmp() {
-  g_cpuState.m_pc = ea;
-  }
-
-static void jsr() {
-  push16(g_cpuState.m_pc - 1);
-  g_cpuState.m_pc = ea;
-  }
-
-static void lda() {
-  value = getvalue();
-  g_cpuState.m_a = (uint8_t)(value & 0x00FF);
-
-  zerocalc(g_cpuState.m_a);
-  signcalc(g_cpuState.m_a);
-  }
-
-static void ldx() {
-  value = getvalue();
-  g_cpuState.m_x = (uint8_t)(value & 0x00FF);
-
-  zerocalc(g_cpuState.m_x);
-  signcalc(g_cpuState.m_x);
-  }
-
-static void ldy() {
-  value = getvalue();
-  g_cpuState.m_y = (uint8_t)(value & 0x00FF);
-
-  zerocalc(g_cpuState.m_y);
-  signcalc(g_cpuState.m_y);
-  }
-
-static void lsr() {
-  value = getvalue();
-  result = value >> 1;
-
-  if (value & 1)
-    setcarry();
-  else
-    clearcarry();
-  zerocalc(result);
-  signcalc(result);
-
-  putvalue(result);
-  }
-
-static void ora() {
-  value = getvalue();
-  result = (uint16_t)g_cpuState.m_a | value;
-
-  zerocalc(result);
-  signcalc(result);
-
-  saveaccum(result);
-  }
-
-static void pha() {
-  push8(g_cpuState.m_a);
-  }
-
-static void php() {
-  push8(g_cpuState.m_status | FLAG_BREAK);
-  }
-
-static void pla() {
-  g_cpuState.m_a = pull8();
-
-  zerocalc(g_cpuState.m_a);
-  signcalc(g_cpuState.m_a);
-  }
-
-static void plp() {
-  g_cpuState.m_status = pull8() | FLAG_CONSTANT;
-  }
-
-static void rol() {
-  value = getvalue();
-  result = (value << 1) | (g_cpuState.m_status & FLAG_CARRY);
-
-  carrycalc(result);
-  zerocalc(result);
-  signcalc(result);
-
-  putvalue(result);
-  }
-
-static void ror() {
-  value = getvalue();
-  result = (value >> 1) | ((g_cpuState.m_status & FLAG_CARRY) << 7);
-
-  if (value & 1)
-    setcarry();
-  else
-    clearcarry();
-  zerocalc(result);
-  signcalc(result);
-
-  putvalue(result);
-  }
-
-static void rti() {
-  g_cpuState.m_status = pull8();
-  value = pull16();
-  g_cpuState.m_pc = value;
-  }
-
-static void rts() {
-  value = pull16();
-  g_cpuState.m_pc = value + 1;
-  }
-
-static void sbc() {
-  value = getvalue() ^ 0x00FF;
-  result = (uint16_t)g_cpuState.m_a + value + (uint16_t)(g_cpuState.m_status & FLAG_CARRY);
-
-  carrycalc(result);
-  zerocalc(result);
-  overflowcalc(result, g_cpuState.m_a, value);
-  signcalc(result);
-  if (g_cpuState.m_status & FLAG_DECIMAL) {
-    clearcarry();
-
-    g_cpuState.m_a -= 0x66;
-    if ((g_cpuState.m_a & 0x0F) > 0x09) {
-      g_cpuState.m_a += 0x06;
-      }
-    if ((g_cpuState.m_a & 0xF0) > 0x90) {
-      g_cpuState.m_a += 0x60;
-      setcarry();
-      }
-    }
-  saveaccum(result);
-  }
-
-static void sec() {
-  setcarry();
-  }
-
-static void sed() {
-  setdecimal();
-  }
-
-static void sei() {
-  setinterrupt();
-  }
-
-static void sta() {
-  putvalue(g_cpuState.m_a);
-  }
-
-static void stx() {
-  putvalue(g_cpuState.m_x);
-  }
-
-static void sty() {
-  putvalue(g_cpuState.m_y);
-  }
-
-static void tax() {
-  g_cpuState.m_x = g_cpuState.m_a;
-
-  zerocalc(g_cpuState.m_x);
-  signcalc(g_cpuState.m_x);
-  }
-
-static void tay() {
-  g_cpuState.m_y = g_cpuState.m_a;
-
-  zerocalc(g_cpuState.m_y);
-  signcalc(g_cpuState.m_y);
-  }
-
-static void tsx() {
-  g_cpuState.m_x = g_cpuState.m_sp;
-
-  zerocalc(g_cpuState.m_x);
-  signcalc(g_cpuState.m_x);
-  }
-
-static void txa() {
-  g_cpuState.m_a = g_cpuState.m_x;
-
-  zerocalc(g_cpuState.m_a);
-  signcalc(g_cpuState.m_a);
-  }
-
-static void txs() {
-  g_cpuState.m_sp = g_cpuState.m_x;
-  }
-
-static void tya() {
-  g_cpuState.m_a = g_cpuState.m_y;
-
-  zerocalc(g_cpuState.m_a);
-  signcalc(g_cpuState.m_a);
-  }
 
 /* Address mapping */
 typedef enum {
@@ -774,61 +347,345 @@ static void applyMode(uint8_t opcode) {
 static void applyOpcode(uint8_t opcode) {
   uint8_t id = g_OPCODE[opcode];
   switch(id) {
-    case OPCODE_ADC: adc(); break;
-    case OPCODE_AND: and(); break;
-    case OPCODE_ASL: asl(); break;
-    case OPCODE_BCC: bcc(); break;
-    case OPCODE_BCS: bcs(); break;
-    case OPCODE_BEQ: beq(); break;
-    case OPCODE_BIT: bit(); break;
-    case OPCODE_BMI: bmi(); break;
-    case OPCODE_BNE: bne(); break;
-    case OPCODE_BPL: bpl(); break;
-    case OPCODE_BRK: brk(); break;
-    case OPCODE_BVC: bvc(); break;
-    case OPCODE_BVS: bvs(); break;
-    case OPCODE_CLC: clc(); break;
-    case OPCODE_CLD: cld(); break;
-    case OPCODE_CLI: cli(); break;
-    case OPCODE_CLV: clv(); break;
-    case OPCODE_CMP: cmp(); break;
-    case OPCODE_CPX: cpx(); break;
-    case OPCODE_CPY: cpy(); break;
-    case OPCODE_DEC: dec(); break;
-    case OPCODE_DEX: dex(); break;
-    case OPCODE_DEY: dey(); break;
-    case OPCODE_EOR: eor(); break;
-    case OPCODE_INC: inc(); break;
-    case OPCODE_INX: inx(); break;
-    case OPCODE_INY: iny(); break;
-    case OPCODE_JMP: jmp(); break;
-    case OPCODE_JSR: jsr(); break;
-    case OPCODE_LDA: lda(); break;
-    case OPCODE_LDX: ldx(); break;
-    case OPCODE_LDY: ldy(); break;
-    case OPCODE_LSR: lsr(); break;
-    case OPCODE_ORA: ora(); break;
-    case OPCODE_PHA: pha(); break;
-    case OPCODE_PHP: php(); break;
-    case OPCODE_PLA: pla(); break;
-    case OPCODE_PLP: plp(); break;
-    case OPCODE_ROL: rol(); break;
-    case OPCODE_ROR: ror(); break;
-    case OPCODE_RTI: rti(); break;
-    case OPCODE_RTS: rts(); break;
-    case OPCODE_SBC: sbc(); break;
-    case OPCODE_SEC: sec(); break;
-    case OPCODE_SED: sed(); break;
-    case OPCODE_SEI: sei(); break;
-    case OPCODE_STA: sta(); break;
-    case OPCODE_STX: stx(); break;
-    case OPCODE_STY: sty(); break;
-    case OPCODE_TAX: tax(); break;
-    case OPCODE_TAY: tay(); break;
-    case OPCODE_TSX: tsx(); break;
-    case OPCODE_TXA: txa(); break;
-    case OPCODE_TXS: txs(); break;
-    case OPCODE_TYA: tya(); break;
+    case OPCODE_ADC:
+      value = getvalue();
+      result = (uint16_t)g_cpuState.m_a + value + (uint16_t)(g_cpuState.m_status & FLAG_CARRY);
+      carrycalc(result);
+      zerocalc(result);
+      overflowcalc(result, g_cpuState.m_a, value);
+      signcalc(result);
+      if (g_cpuState.m_status & FLAG_DECIMAL) {
+        clearcarry();
+
+        if ((g_cpuState.m_a & 0x0F) > 0x09) {
+          g_cpuState.m_a += 0x06;
+          }
+        if ((g_cpuState.m_a & 0xF0) > 0x90) {
+          g_cpuState.m_a += 0x60;
+          setcarry();
+          }
+        }
+      saveaccum(result);
+      break;
+    case OPCODE_AND:
+      value = getvalue();
+      result = (uint16_t)g_cpuState.m_a & value;
+      zerocalc(result);
+      signcalc(result);
+      saveaccum(result);
+      break;
+    case OPCODE_ASL:
+      value = getvalue();
+      result = value << 1;
+      carrycalc(result);
+      zerocalc(result);
+      signcalc(result);
+      putvalue(result);
+      break;
+    case OPCODE_BCC:
+      if ((g_cpuState.m_status & FLAG_CARRY) == 0) {
+        oldpc =g_cpuState.m_pc;
+        g_cpuState.m_pc += reladdr;
+        }
+      break;
+    case OPCODE_BCS:
+      if ((g_cpuState.m_status & FLAG_CARRY) == FLAG_CARRY) {
+        oldpc =g_cpuState.m_pc;
+        g_cpuState.m_pc += reladdr;
+        }
+      break;
+    case OPCODE_BEQ:
+      if ((g_cpuState.m_status & FLAG_ZERO) == FLAG_ZERO) {
+        oldpc =g_cpuState.m_pc;
+        g_cpuState.m_pc += reladdr;
+        }
+      break;
+    case OPCODE_BIT:
+      value = getvalue();
+      result = (uint16_t)g_cpuState.m_a & value;
+      zerocalc(result);
+      g_cpuState.m_status = (g_cpuState.m_status & 0x3F) | (uint8_t)(value & 0xC0);
+      break;
+    case OPCODE_BMI:
+      if ((g_cpuState.m_status & FLAG_SIGN) == FLAG_SIGN) {
+        oldpc =g_cpuState.m_pc;
+        g_cpuState.m_pc += reladdr;
+        }
+      break;
+    case OPCODE_BNE:
+      if ((g_cpuState.m_status & FLAG_ZERO) == 0) {
+        oldpc =g_cpuState.m_pc;
+        g_cpuState.m_pc += reladdr;
+        }
+      break;
+    case OPCODE_BPL:
+      if ((g_cpuState.m_status & FLAG_SIGN) == 0) {
+        oldpc =g_cpuState.m_pc;
+        g_cpuState.m_pc += reladdr;
+        }
+      break;
+    case OPCODE_BRK:
+      g_cpuState.m_pc++;
+      push16(g_cpuState.m_pc); //push next instruction address onto stack
+      push8(g_cpuState.m_status | FLAG_BREAK); //push CPU status to stack
+      setinterrupt(); //set interrupt flag
+      g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
+      break;
+    case OPCODE_BVC:
+      if ((g_cpuState.m_status & FLAG_OVERFLOW) == 0) {
+        oldpc =g_cpuState.m_pc;
+        g_cpuState.m_pc += reladdr;
+        }
+      break;
+    case OPCODE_BVS:
+      if ((g_cpuState.m_status & FLAG_OVERFLOW) == FLAG_OVERFLOW) {
+        oldpc =g_cpuState.m_pc;
+        g_cpuState.m_pc += reladdr;
+        }
+      break;
+    case OPCODE_CLC:
+      clearcarry();
+      break;
+    case OPCODE_CLD:
+      cleardecimal();
+      break;
+    case OPCODE_CLI:
+      clearinterrupt();
+      break;
+    case OPCODE_CLV:
+      clearoverflow();
+      break;
+    case OPCODE_CMP:
+      value = getvalue();
+      result = (uint16_t)g_cpuState.m_a - value;
+      if (g_cpuState.m_a >= (uint8_t)(value & 0x00FF))
+        setcarry();
+      else
+        clearcarry();
+      if (g_cpuState.m_a == (uint8_t)(value & 0x00FF))
+        setzero();
+      else
+        clearzero();
+      signcalc(result);
+      break;
+    case OPCODE_CPX:
+      value = getvalue();
+      result = (uint16_t)g_cpuState.m_x - value;
+      if (g_cpuState.m_x >= (uint8_t)(value & 0x00FF))
+        setcarry();
+      else
+        clearcarry();
+      if (g_cpuState.m_x == (uint8_t)(value & 0x00FF))
+        setzero();
+      else
+        clearzero();
+      signcalc(result);
+      break;
+    case OPCODE_CPY:
+      value = getvalue();
+      result = (uint16_t)g_cpuState.m_y - value;
+      if (g_cpuState.m_y >= (uint8_t)(value & 0x00FF))
+        setcarry();
+      else
+        clearcarry();
+      if (g_cpuState.m_y == (uint8_t)(value & 0x00FF))
+        setzero();
+      else
+        clearzero();
+      signcalc(result);
+      break;
+    case OPCODE_DEC:
+      value = getvalue();
+      result = value - 1;
+      zerocalc(result);
+      signcalc(result);
+      putvalue(result);
+      break;
+    case OPCODE_DEX:
+      g_cpuState.m_x--;
+      zerocalc(g_cpuState.m_x);
+      signcalc(g_cpuState.m_x);
+      break;
+    case OPCODE_DEY:
+      g_cpuState.m_y--;
+      zerocalc(g_cpuState.m_y);
+      signcalc(g_cpuState.m_y);
+      break;
+        case OPCODE_EOR:
+      value = getvalue();
+      result = (uint16_t)g_cpuState.m_a ^ value;
+      zerocalc(result);
+      signcalc(result);
+      saveaccum(result);
+      break;
+    case OPCODE_INC:
+      value = getvalue();
+      result = value + 1;
+      zerocalc(result);
+      signcalc(result);
+      putvalue(result);
+      break;
+    case OPCODE_INX:
+      g_cpuState.m_x++;
+      zerocalc(g_cpuState.m_x);
+      signcalc(g_cpuState.m_x);
+      break;
+    case OPCODE_INY:
+      g_cpuState.m_y++;
+      zerocalc(g_cpuState.m_y);
+      signcalc(g_cpuState.m_y);
+      break;
+    case OPCODE_JMP:
+      g_cpuState.m_pc = ea;
+      break;
+    case OPCODE_JSR:
+      push16(g_cpuState.m_pc - 1);
+      g_cpuState.m_pc = ea;
+      break;
+    case OPCODE_LDA:
+      value = getvalue();
+      g_cpuState.m_a = (uint8_t)(value & 0x00FF);
+      zerocalc(g_cpuState.m_a);
+      signcalc(g_cpuState.m_a);
+      break;
+    case OPCODE_LDX:
+      value = getvalue();
+      g_cpuState.m_x = (uint8_t)(value & 0x00FF);
+      zerocalc(g_cpuState.m_x);
+      signcalc(g_cpuState.m_x);
+      break;
+    case OPCODE_LDY:
+      value = getvalue();
+      g_cpuState.m_y = (uint8_t)(value & 0x00FF);
+      zerocalc(g_cpuState.m_y);
+      signcalc(g_cpuState.m_y);
+      break;
+    case OPCODE_LSR:
+      value = getvalue();
+      result = value >> 1;
+      if (value & 1)
+        setcarry();
+      else
+        clearcarry();
+      zerocalc(result);
+      signcalc(result);
+      putvalue(result);
+      break;
+    case OPCODE_ORA:
+      value = getvalue();
+      result = (uint16_t)g_cpuState.m_a | value;
+      zerocalc(result);
+      signcalc(result);
+      saveaccum(result);
+      break;
+    case OPCODE_PHA:
+      push8(g_cpuState.m_a);
+      break;
+    case OPCODE_PHP:
+      push8(g_cpuState.m_status | FLAG_BREAK);
+      break;
+    case OPCODE_PLA:
+      g_cpuState.m_a = pull8();
+      zerocalc(g_cpuState.m_a);
+      signcalc(g_cpuState.m_a);
+      break;
+    case OPCODE_PLP:
+      g_cpuState.m_status = pull8() | FLAG_CONSTANT;
+      break;
+    case OPCODE_ROL:
+      value = getvalue();
+      result = (value << 1) | (g_cpuState.m_status & FLAG_CARRY);
+      carrycalc(result);
+      zerocalc(result);
+      signcalc(result);
+      putvalue(result);
+      break;
+    case OPCODE_ROR:
+      value = getvalue();
+      result = (value >> 1) | ((g_cpuState.m_status & FLAG_CARRY) << 7);
+      if (value & 1)
+        setcarry();
+      else
+        clearcarry();
+      zerocalc(result);
+      signcalc(result);
+      putvalue(result);
+      break;
+    case OPCODE_RTI:
+      g_cpuState.m_status = pull8();
+      value = pull16();
+      g_cpuState.m_pc = value;
+      break;
+    case OPCODE_RTS:
+      value = pull16();
+      g_cpuState.m_pc = value + 1;
+      break;
+    case OPCODE_SBC:
+      value = getvalue() ^ 0x00FF;
+      result = (uint16_t)g_cpuState.m_a + value + (uint16_t)(g_cpuState.m_status & FLAG_CARRY);
+      carrycalc(result);
+      zerocalc(result);
+      overflowcalc(result, g_cpuState.m_a, value);
+      signcalc(result);
+      if (g_cpuState.m_status & FLAG_DECIMAL) {
+        clearcarry();
+        g_cpuState.m_a -= 0x66;
+        if ((g_cpuState.m_a & 0x0F) > 0x09) {
+          g_cpuState.m_a += 0x06;
+          }
+        if ((g_cpuState.m_a & 0xF0) > 0x90) {
+          g_cpuState.m_a += 0x60;
+          setcarry();
+          }
+        }
+      saveaccum(result);
+      break;
+    case OPCODE_SEC:
+      setcarry();
+      break;
+    case OPCODE_SED:
+      setdecimal();
+      break;
+    case OPCODE_SEI:
+      setinterrupt();
+      break;
+    case OPCODE_STA:
+      putvalue(g_cpuState.m_a);
+      break;
+    case OPCODE_STX:
+      putvalue(g_cpuState.m_x);
+      break;
+    case OPCODE_STY:
+      putvalue(g_cpuState.m_y);
+      break;
+    case OPCODE_TAX:
+      g_cpuState.m_x = g_cpuState.m_a;
+      zerocalc(g_cpuState.m_x);
+      signcalc(g_cpuState.m_x);
+      break;
+    case OPCODE_TAY:
+      g_cpuState.m_y = g_cpuState.m_a;
+      zerocalc(g_cpuState.m_y);
+      signcalc(g_cpuState.m_y);
+      break;
+    case OPCODE_TSX:
+      g_cpuState.m_x = g_cpuState.m_sp;
+      zerocalc(g_cpuState.m_x);
+      signcalc(g_cpuState.m_x);
+      break;
+    case OPCODE_TXA:
+      g_cpuState.m_a = g_cpuState.m_x;
+      zerocalc(g_cpuState.m_a);
+      signcalc(g_cpuState.m_a);
+      break;
+    case OPCODE_TXS:
+      g_cpuState.m_sp = g_cpuState.m_x;
+      break;
+    case OPCODE_TYA:
+      g_cpuState.m_a = g_cpuState.m_y;
+      zerocalc(g_cpuState.m_a);
+      signcalc(g_cpuState.m_a);
+      break;
     }
   }
 
