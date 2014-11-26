@@ -12,12 +12,11 @@
 extern "C" {
 #endif
 
-uint8_t readChar();
-void writeChar(uint8_t ch);
-
 //---------------------------------------------------------------------------
 // State information
 //---------------------------------------------------------------------------
+
+#pragma pack(push, 1)
 
 /** CPU state information
  *
@@ -36,16 +35,32 @@ typedef struct _CPU_STATE {
 //! The global state information
 extern CPU_STATE g_cpuState;
 
+/** Time of day information
+ *
+ * Provides a simple represention of the current time of day. There is no RTC
+ * in the system so this starts at 00:00:00 after reset and increments every
+ * second. This can be set by the emulated code to keep track of time.
+ */
+typedef struct _TIME_OF_DAY {
+  uint8_t m_hour;   //!< Hour (24 hour format)
+  uint8_t m_minute; //!< Minute
+  uint8_t m_second; //!< Seconds
+  } TIME_OF_DAY;
+
 /** Represents the memory mapped IO area
  *
  * This structure maintains data for the memory mapped IO area.
  */
 typedef struct _IO_STATE {
-  uint8_t m_pages[8]; //!< Memory mapping
+  uint32_t    m_ips;      //!< Instructions per second (read only)
+  TIME_OF_DAY m_time;     //!< Current time (read/write)
+  uint8_t     m_pages[8]; //!< MMU page map (read/write)
   } IO_STATE;
 
 //! The global IO state information
 extern IO_STATE g_ioState;
+
+#pragma pack(pop)
 
 //---------------------------------------------------------------------------
 // Memory and IO access
@@ -77,9 +92,29 @@ uint8_t cpuReadByte(uint16_t address);
 */
 void cpuWriteByte(uint16_t address, uint8_t value);
 
+/** Read a byte from the IO region
+ *
+ * @param address the offset into the IO area to read
+ */
+uint8_t cpuReadIO(uint16_t address);
+
+/** Write a byte to the IO region
+ *
+ * @param address the offset into the IO area to write
+ * @param value the value to write
+ */
+void cpuWriteIO(uint16_t address, uint8_t byte);
+
 //---------------------------------------------------------------------------
 // Functions implemented by the emulator.
 //---------------------------------------------------------------------------
+
+/** Types of interrupt that can be generated
+ */
+typedef enum {
+  INT_IRQ, //!< The general interrupt request pin
+  INT_NMI, //!< The non-maskable interrupt pin
+  } INTERRUPT;
 
 /** Reset the CPU
  *
@@ -90,6 +125,12 @@ void cpuReset();
 /** Execute a single 6502 instruction
  */
 void cpuStep();
+
+/** Trigger an interrupt
+ *
+ * @param interrupt the type of interrupt to generate
+ */
+void cpuInterrupt(INTERRUPT interrupt);
 
 #ifdef __cplusplus
 }

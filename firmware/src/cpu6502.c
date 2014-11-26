@@ -14,10 +14,12 @@
 #include <stdint.h>
 #include "cpu6502.h"
 
-//6502 defines
-#define UNDOCUMENTED //when this is defined, undocumented opcodes are handled.
-//otherwise, they're simply treated as NOPs.
+//--- State information and internal variables
+CPU_STATE       g_cpuState; //!< CPU state
+static uint8_t  opcode;     //!< Current opcode
+static uint16_t ea;         //!< Current effective address
 
+//--- Bit definitions for the flag register
 #define FLAG_CARRY     0x01
 #define FLAG_ZERO      0x02
 #define FLAG_INTERRUPT 0x04
@@ -27,119 +29,16 @@
 #define FLAG_OVERFLOW  0x40
 #define FLAG_SIGN      0x80
 
+//--- Start address for the stack pointer
 #define BASE_STACK     0x100
 
-#define saveaccum(n) g_cpuState.m_a = (uint8_t)((n) & 0x00FF)
+//---------------------------------------------------------------------------
+// Map opcodes to addressing modes and instructions
+//---------------------------------------------------------------------------
 
-
-//flag modifier macros
-#define setcarry() g_cpuState.m_status |= FLAG_CARRY
-#define clearcarry() g_cpuState.m_status &= (~FLAG_CARRY)
-#define setzero() g_cpuState.m_status |= FLAG_ZERO
-#define clearzero() g_cpuState.m_status &= (~FLAG_ZERO)
-#define setinterrupt() g_cpuState.m_status |= FLAG_INTERRUPT
-#define clearinterrupt() g_cpuState.m_status &= (~FLAG_INTERRUPT)
-#define setdecimal() g_cpuState.m_status |= FLAG_DECIMAL
-#define cleardecimal() g_cpuState.m_status &= (~FLAG_DECIMAL)
-#define setoverflow() g_cpuState.m_status |= FLAG_OVERFLOW
-#define clearoverflow() g_cpuState.m_status &= (~FLAG_OVERFLOW)
-#define setsign() g_cpuState.m_status |= FLAG_SIGN
-#define clearsign() g_cpuState.m_status &= (~FLAG_SIGN)
-
-
-//flag calculation macros
-static void zerocalc(uint16_t n) {
-  if ((n) & 0x00FF)
-    clearzero();
-  else
-    setzero();
-  }
-
-static void signcalc(uint16_t n) {
-  if ((n) & 0x0080)
-    setsign();
-  else
-    clearsign();
-  }
-
-static void carrycalc(uint16_t n) {
-  if ((n) & 0xFF00)
-    setcarry();
-  else
-    clearcarry();
-  }
-
-#define overflowcalc(n, m, o) { /* n = result, m = accumulator, o = memory */ \
-    if (((n) ^ (uint16_t)(m)) & ((n) ^ (o)) & 0x0080) setoverflow();\
-        else clearoverflow();\
-}
-
-// 6502 CPU registers
-CPU_STATE g_cpuState;
-
-//helper variables
-static uint8_t opcode; //!< Current opcode
-static uint16_t ea;    //!< Current effective address
-
-//a few general functions used by various other functions
-static void push16(uint16_t pushval) {
-  cpuWriteByte(BASE_STACK + g_cpuState.m_sp, (pushval >> 8) & 0xFF);
-  cpuWriteByte(BASE_STACK + ((g_cpuState.m_sp - 1) & 0xFF), pushval & 0xFF);
-  g_cpuState.m_sp -= 2;
-  }
-
-static void push8(uint8_t pushval) {
-  cpuWriteByte(BASE_STACK + g_cpuState.m_sp--, pushval);
-  }
-
-static uint16_t pull16() {
-  uint16_t temp16;
-  temp16 = cpuReadByte(BASE_STACK + ((g_cpuState.m_sp + 1) & 0xFF)) | ((uint16_t)cpuReadByte(BASE_STACK + ((g_cpuState.m_sp + 2) & 0xFF)) << 8);
-  g_cpuState.m_sp += 2;
-  return(temp16);
-  }
-
-static uint8_t pull8() {
-  return (cpuReadByte(BASE_STACK + ++g_cpuState.m_sp));
-  }
-
-//addressing mode functions, calculates effective addresses
-
-static uint16_t getvalue() {
-  if ((opcode==0x0a)||(opcode==0x2a)||(opcode==0x4a)||(opcode==0x6a))
-    return((uint16_t)g_cpuState.m_a);
-  else
-    return((uint16_t)cpuReadByte(ea));
-  }
-
-static void putvalue(uint16_t saveval) {
-  if ((opcode==0x0a)||(opcode==0x2a)||(opcode==0x4a)||(opcode==0x6a))
-    g_cpuState.m_a = (uint8_t)(saveval & 0x00FF);
-  else
-    cpuWriteByte(ea, (saveval & 0x00FF));
-  }
-
-//instruction handler functions
-
-
-
-
-
-/* Address mapping */
 typedef enum {
-  MODE_ABSO,
-  MODE_ABSX,
-  MODE_ABSY,
-  MODE_ACC,
-  MODE_IMM,
-  MODE_IMP,
-  MODE_IND,
-  MODE_INDX,
-  MODE_INDY,
-  MODE_REL,
-  MODE_ZP,
-  MODE_ZPX,
-  MODE_ZPY
+  MODE_ABSO, MODE_ABSX, MODE_ABSY, MODE_ACC, MODE_IMM, MODE_IMP, MODE_IND,
+  MODE_INDX, MODE_INDY, MODE_REL, MODE_ZP, MODE_ZPX, MODE_ZPY
   } MODE;
 
 static uint8_t g_MODE[] = {
@@ -179,72 +78,20 @@ static uint8_t g_MODE[] = {
 
 /* Opcode execution */
 typedef enum {
-  OPCODE_ADC,
-  OPCODE_AND,
-  OPCODE_ASL,
-  OPCODE_BCC,
-  OPCODE_BCS,
-  OPCODE_BEQ,
-  OPCODE_BIT,
-  OPCODE_BMI,
-  OPCODE_BNE,
-  OPCODE_BPL,
-  OPCODE_BRK,
-  OPCODE_BVC,
-  OPCODE_BVS,
-  OPCODE_CLC,
-  OPCODE_CLD,
-  OPCODE_CLI,
-  OPCODE_CLV,
-  OPCODE_CMP,
-  OPCODE_CPX,
-  OPCODE_CPY,
-  OPCODE_DCP,
-  OPCODE_DEC,
-  OPCODE_DEX,
-  OPCODE_DEY,
-  OPCODE_EOR,
-  OPCODE_INC,
-  OPCODE_INX,
-  OPCODE_INY,
-  OPCODE_ISB,
-  OPCODE_JMP,
-  OPCODE_JSR,
-  OPCODE_LAX,
-  OPCODE_LDA,
-  OPCODE_LDX,
-  OPCODE_LDY,
-  OPCODE_LSR,
-  OPCODE_NOP,
-  OPCODE_ORA,
-  OPCODE_PHA,
-  OPCODE_PHP,
-  OPCODE_PLA,
-  OPCODE_PLP,
-  OPCODE_RLA,
-  OPCODE_ROL,
-  OPCODE_ROR,
-  OPCODE_RRA,
-  OPCODE_RTI,
-  OPCODE_RTS,
-  OPCODE_SAX,
-  OPCODE_SBC,
-  OPCODE_SEC,
-  OPCODE_SED,
-  OPCODE_SEI,
-  OPCODE_SLO,
-  OPCODE_SRE,
-  OPCODE_STA,
-  OPCODE_STX,
-  OPCODE_STY,
-  OPCODE_TAX,
-  OPCODE_TAY,
-  OPCODE_TSX,
-  OPCODE_TXA,
-  OPCODE_TXS,
+  OPCODE_ADC, OPCODE_AND, OPCODE_ASL, OPCODE_BCC, OPCODE_BCS, OPCODE_BEQ, OPCODE_BIT,
+  OPCODE_BMI, OPCODE_BNE, OPCODE_BPL, OPCODE_BRK, OPCODE_BVC, OPCODE_BVS, OPCODE_CLC,
+  OPCODE_CLD, OPCODE_CLI, OPCODE_CLV, OPCODE_CMP, OPCODE_CPX, OPCODE_CPY, OPCODE_DCP,
+  OPCODE_DEC, OPCODE_DEX, OPCODE_DEY, OPCODE_EOR, OPCODE_INC, OPCODE_INX, OPCODE_INY,
+  OPCODE_ISB, OPCODE_JMP, OPCODE_JSR, OPCODE_LAX, OPCODE_LDA, OPCODE_LDX, OPCODE_LDY,
+  OPCODE_LSR, OPCODE_NOP, OPCODE_ORA, OPCODE_PHA, OPCODE_PHP, OPCODE_PLA, OPCODE_PLP,
+  OPCODE_RLA, OPCODE_ROL, OPCODE_ROR, OPCODE_RRA, OPCODE_RTI, OPCODE_RTS, OPCODE_SAX,
+  OPCODE_SBC, OPCODE_SEC, OPCODE_SED, OPCODE_SEI, OPCODE_SLO, OPCODE_SRE, OPCODE_STA,
+  OPCODE_STX, OPCODE_STY, OPCODE_TAX, OPCODE_TAY, OPCODE_TSX, OPCODE_TXA, OPCODE_TXS,
   OPCODE_TYA
   } OPCODE;
 
+/** Define the instructions to execute for each opcode.
+ */
 static uint8_t g_OPCODE[] = {
   OPCODE_BRK, OPCODE_ORA, OPCODE_NOP, OPCODE_SLO, OPCODE_NOP, OPCODE_ORA, OPCODE_ASL, OPCODE_SLO,
   OPCODE_PHP, OPCODE_ORA, OPCODE_ASL, OPCODE_NOP, OPCODE_NOP, OPCODE_ORA, OPCODE_ASL, OPCODE_SLO,
@@ -280,6 +127,129 @@ static uint8_t g_OPCODE[] = {
   OPCODE_SED, OPCODE_SBC, OPCODE_NOP, OPCODE_ISB, OPCODE_NOP, OPCODE_SBC, OPCODE_INC, OPCODE_ISB
   };
 
+//---------------------------------------------------------------------------
+// Helper functions and macros
+//---------------------------------------------------------------------------
+
+//--- Save the value to the accumulator
+#define saveaccum(n) g_cpuState.m_a = (uint8_t)((n) & 0x00FF)
+
+//--- Flag modifier macros
+#define setcarry() g_cpuState.m_status |= FLAG_CARRY
+#define clearcarry() g_cpuState.m_status &= (~FLAG_CARRY)
+#define setzero() g_cpuState.m_status |= FLAG_ZERO
+#define clearzero() g_cpuState.m_status &= (~FLAG_ZERO)
+#define setinterrupt() g_cpuState.m_status |= FLAG_INTERRUPT
+#define clearinterrupt() g_cpuState.m_status &= (~FLAG_INTERRUPT)
+#define setdecimal() g_cpuState.m_status |= FLAG_DECIMAL
+#define cleardecimal() g_cpuState.m_status &= (~FLAG_DECIMAL)
+#define setoverflow() g_cpuState.m_status |= FLAG_OVERFLOW
+#define clearoverflow() g_cpuState.m_status &= (~FLAG_OVERFLOW)
+#define setsign() g_cpuState.m_status |= FLAG_SIGN
+#define clearsign() g_cpuState.m_status &= (~FLAG_SIGN)
+
+/** Set the zero flag based on the given value
+ *
+ * @param n the value to check
+ */
+static void zerocalc(uint16_t n) {
+  if ((n) & 0x00FF)
+    clearzero();
+  else
+    setzero();
+  }
+
+/** Set the sign flag based on the given value
+ *
+ * @param n the value to check
+ */
+static void signcalc(uint16_t n) {
+  if ((n) & 0x0080)
+    setsign();
+  else
+    clearsign();
+  }
+
+/** Set the carry flag based on the given value
+ *
+ * @param n the value to check
+ */
+static void carrycalc(uint16_t n) {
+  if ((n) & 0xFF00)
+    setcarry();
+  else
+    clearcarry();
+  }
+
+/** Set the overflow flag based on the given value
+ */
+#define overflowcalc(n, m, o) { /* n = result, m = accumulator, o = memory */ \
+  if (((n) ^ (uint16_t)(m)) & ((n) ^ (o)) & 0x0080) setoverflow();\
+    else clearoverflow();\
+  }
+
+/** Push a 16 bit value on to the stack
+ *
+ * @param pushval the value to push
+ */
+static void push16(uint16_t pushval) {
+  cpuWriteByte(BASE_STACK + g_cpuState.m_sp, (pushval >> 8) & 0xFF);
+  cpuWriteByte(BASE_STACK + ((g_cpuState.m_sp - 1) & 0xFF), pushval & 0xFF);
+  g_cpuState.m_sp -= 2;
+  }
+
+/** Push an 8 bit value on to the stack
+ *
+ * @param pushval the value to push
+ */
+static void push8(uint8_t pushval) {
+  cpuWriteByte(BASE_STACK + g_cpuState.m_sp--, pushval);
+  }
+
+/** Pop a 16 bit value from the stack
+ *
+ * @return the value popped
+ */
+static uint16_t pull16() {
+  uint16_t temp16;
+  temp16 = cpuReadByte(BASE_STACK + ((g_cpuState.m_sp + 1) & 0xFF)) | ((uint16_t)cpuReadByte(BASE_STACK + ((g_cpuState.m_sp + 2) & 0xFF)) << 8);
+  g_cpuState.m_sp += 2;
+  return(temp16);
+  }
+
+/** Pop an 8 bit value from the stack
+ *
+ * @return the value popped
+ */
+static uint8_t pull8() {
+  return (cpuReadByte(BASE_STACK + ++g_cpuState.m_sp));
+  }
+
+/** Get the value at the current effective address
+ *
+ * @return the value at the address according to addressing mode
+ */
+static uint16_t getvalue() {
+  if ((opcode==0x0a)||(opcode==0x2a)||(opcode==0x4a)||(opcode==0x6a))
+    return((uint16_t)g_cpuState.m_a);
+  else
+    return((uint16_t)cpuReadByte(ea));
+  }
+
+/** Store a value at the current effective address
+ *
+ * @param value the value to store
+ */
+static void putvalue(uint16_t saveval) {
+  if ((opcode==0x0a)||(opcode==0x2a)||(opcode==0x4a)||(opcode==0x6a))
+    g_cpuState.m_a = (uint8_t)(saveval & 0x00FF);
+  else
+    cpuWriteByte(ea, (saveval & 0x00FF));
+  }
+
+//---------------------------------------------------------------------------
+// Core emulator implementation
+//---------------------------------------------------------------------------
 
 /** Execute a single 6502 instruction
  *
@@ -686,21 +656,28 @@ void cpuStep() {
     }
   }
 
-void nmi6502() {
+/** Trigger an interrupt
+ *
+ * @param interrupt the type of interrupt to generate
+ */
+void cpuInterrupt(INTERRUPT interrupt) {
   push16(g_cpuState.m_pc);
   push8(g_cpuState.m_status);
   g_cpuState.m_status |= FLAG_INTERRUPT;
-  g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFA) | ((uint16_t)cpuReadByte(0xFFFB) << 8);
+  if (interrupt==INT_NMI)
+    g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFA) | ((uint16_t)cpuReadByte(0xFFFB) << 8);
+  else
+    g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
   }
 
-void irq6502() {
-  push16(g_cpuState.m_pc);
-  push8(g_cpuState.m_status);
-  g_cpuState.m_status |= FLAG_INTERRUPT;
-  g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
-  }
-
+/** Reset the CPU
+ *
+ * Simulates a hardware reset.
+ */
 void cpuReset() {
+  // Do the IO reset as well (simulate a power cycle)
+  cpuResetIO();
+  // Reset the CPU state
   g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFC) | ((uint16_t)cpuReadByte(0xFFFD) << 8);
   g_cpuState.m_a = 0;
   g_cpuState.m_x = 0;
@@ -708,5 +685,3 @@ void cpuReset() {
   g_cpuState.m_sp = 0xFD;
   g_cpuState.m_status |= FLAG_CONSTANT;
   }
-
-
