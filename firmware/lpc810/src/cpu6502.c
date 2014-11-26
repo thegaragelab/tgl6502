@@ -659,244 +659,180 @@ static void rra() {
   adc();
   }
 
+/* Address mapping */
+typedef enum {
+  MODE_ABSO,
+  MODE_ABSX,
+  MODE_ABSY,
+  MODE_ACC,
+  MODE_IMM,
+  MODE_IMP,
+  MODE_IND,
+  MODE_INDX,
+  MODE_INDY,
+  MODE_REL,
+  MODE_ZP,
+  MODE_ZPX,
+  MODE_ZPY
+  } MODE;
+
+static uint8_t g_MODE[] = {
+  MODE_IMP, MODE_INDX, MODE_IMP, MODE_INDX, MODE_ZP, MODE_ZP, MODE_ZP, MODE_ZP,
+  MODE_IMP, MODE_IMM, MODE_ACC, MODE_IMM, MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_ABSO,
+  MODE_REL, MODE_INDY, MODE_IMP, MODE_INDY, MODE_ZPX, MODE_ZPX, MODE_ZPX, MODE_ZPX,
+  MODE_IMP, MODE_ABSY, MODE_IMP, MODE_ABSY, MODE_ABSX, MODE_ABSX, MODE_ABSX, MODE_ABSX,
+  MODE_ABSO, MODE_INDX, MODE_IMP, MODE_INDX, MODE_ZP, MODE_ZP, MODE_ZP, MODE_ZP,
+  MODE_IMP, MODE_IMM, MODE_ACC, MODE_IMM, MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_ABSO,
+  MODE_REL, MODE_INDY, MODE_IMP, MODE_INDY, MODE_ZPX, MODE_ZPX, MODE_ZPX, MODE_ZPX,
+  MODE_IMP, MODE_ABSY, MODE_IMP, MODE_ABSY, MODE_ABSX, MODE_ABSX, MODE_ABSX, MODE_ABSX,
+  MODE_IMP, MODE_INDX, MODE_IMP, MODE_INDX, MODE_ZP, MODE_ZP, MODE_ZP, MODE_ZP, MODE_IMP,
+  MODE_IMM, MODE_ACC, MODE_IMM, MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_REL,
+  MODE_INDY, MODE_IMP, MODE_INDY, MODE_ZPX, MODE_ZPX, MODE_ZPX, MODE_ZPX, MODE_IMP,
+  MODE_ABSY, MODE_IMP, MODE_ABSY, MODE_ABSX, MODE_ABSX, MODE_ABSX, MODE_ABSX, MODE_IMP,
+  MODE_INDX, MODE_IMP, MODE_INDX, MODE_ZP, MODE_ZP, MODE_ZP, MODE_ZP, MODE_IMP, MODE_IMM,
+  MODE_ACC, MODE_IMM, MODE_IND, MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_REL, MODE_INDY,
+  MODE_IMP, MODE_INDY, MODE_ZPX, MODE_ZPX, MODE_ZPX, MODE_ZPX, MODE_IMP, MODE_ABSY,
+  MODE_IMP, MODE_ABSY, MODE_ABSX, MODE_ABSX, MODE_ABSX, MODE_ABSX, MODE_IMM, MODE_INDX,
+  MODE_IMM, MODE_INDX, MODE_ZP, MODE_ZP, MODE_ZP, MODE_ZP, MODE_IMP, MODE_IMM, MODE_IMP,
+  MODE_IMM, MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_REL, MODE_INDY, MODE_IMP,
+  MODE_INDY, MODE_ZPX, MODE_ZPX, MODE_ZPY, MODE_ZPY, MODE_IMP, MODE_ABSY, MODE_IMP,
+  MODE_ABSY, MODE_ABSX, MODE_ABSX, MODE_ABSY, MODE_ABSY, MODE_IMM, MODE_INDX, MODE_IMM,
+  MODE_INDX, MODE_ZP, MODE_ZP, MODE_ZP, MODE_ZP, MODE_IMP, MODE_IMM, MODE_IMP, MODE_IMM,
+  MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_REL, MODE_INDY, MODE_IMP, MODE_INDY,
+  MODE_ZPX, MODE_ZPX, MODE_ZPY, MODE_ZPY, MODE_IMP, MODE_ABSY, MODE_IMP, MODE_ABSY,
+  MODE_ABSX, MODE_ABSX, MODE_ABSY, MODE_ABSY, MODE_IMM, MODE_INDX, MODE_IMM, MODE_INDX,
+  MODE_ZP, MODE_ZP, MODE_ZP, MODE_ZP, MODE_IMP, MODE_IMM, MODE_IMP, MODE_IMM, MODE_ABSO,
+  MODE_ABSO, MODE_ABSO, MODE_ABSO, MODE_REL, MODE_INDY, MODE_IMP, MODE_INDY, MODE_ZPX,
+  MODE_ZPX, MODE_ZPX, MODE_ZPX, MODE_IMP, MODE_ABSY, MODE_IMP, MODE_ABSY, MODE_ABSX,
+  MODE_ABSX, MODE_ABSX, MODE_ABSX, MODE_IMM, MODE_INDX, MODE_IMM, MODE_INDX, MODE_ZP,
+  MODE_ZP, MODE_ZP, MODE_ZP, MODE_IMP, MODE_IMM, MODE_IMP, MODE_IMM, MODE_ABSO, MODE_ABSO,
+  MODE_ABSO, MODE_ABSO, MODE_REL, MODE_INDY, MODE_IMP, MODE_INDY, MODE_ZPX, MODE_ZPX,
+  MODE_ZPX, MODE_ZPX, MODE_IMP, MODE_ABSY, MODE_IMP, MODE_ABSY, MODE_ABSX, MODE_ABSX,
+  MODE_ABSX, MODE_ABSX
+  };
+
+/* Opcode execution */
+typedef enum {
+  OPCODE_ADC,
+  OPCODE_AND,
+  OPCODE_ASL,
+  OPCODE_BCC,
+  OPCODE_BCS,
+  OPCODE_BEQ,
+  OPCODE_BIT,
+  OPCODE_BMI,
+  OPCODE_BNE,
+  OPCODE_BPL,
+  OPCODE_BRK,
+  OPCODE_BVC,
+  OPCODE_BVS,
+  OPCODE_CLC,
+  OPCODE_CLD,
+  OPCODE_CLI,
+  OPCODE_CLV,
+  OPCODE_CMP,
+  OPCODE_CPX,
+  OPCODE_CPY,
+  OPCODE_DCP,
+  OPCODE_DEC,
+  OPCODE_DEX,
+  OPCODE_DEY,
+  OPCODE_EOR,
+  OPCODE_INC,
+  OPCODE_INX,
+  OPCODE_INY,
+  OPCODE_ISB,
+  OPCODE_JMP,
+  OPCODE_JSR,
+  OPCODE_LAX,
+  OPCODE_LDA,
+  OPCODE_LDX,
+  OPCODE_LDY,
+  OPCODE_LSR,
+  OPCODE_NOP,
+  OPCODE_ORA,
+  OPCODE_PHA,
+  OPCODE_PHP,
+  OPCODE_PLA,
+  OPCODE_PLP,
+  OPCODE_RLA,
+  OPCODE_ROL,
+  OPCODE_ROR,
+  OPCODE_RRA,
+  OPCODE_RTI,
+  OPCODE_RTS,
+  OPCODE_SAX,
+  OPCODE_SBC,
+  OPCODE_SEC,
+  OPCODE_SED,
+  OPCODE_SEI,
+  OPCODE_SLO,
+  OPCODE_SRE,
+  OPCODE_STA,
+  OPCODE_STX,
+  OPCODE_STY,
+  OPCODE_TAX,
+  OPCODE_TAY,
+  OPCODE_TSX,
+  OPCODE_TXA,
+  OPCODE_TXS,
+  OPCODE_TYA
+  } OPCODE;
+
+static uint8_t g_OPCODE[] = {
+  OPCODE_BRK, OPCODE_ORA, OPCODE_NOP, OPCODE_SLO, OPCODE_NOP, OPCODE_ORA, OPCODE_ASL, OPCODE_SLO,
+  OPCODE_PHP, OPCODE_ORA, OPCODE_ASL, OPCODE_NOP, OPCODE_NOP, OPCODE_ORA, OPCODE_ASL, OPCODE_SLO,
+  OPCODE_BPL, OPCODE_ORA, OPCODE_NOP, OPCODE_SLO, OPCODE_NOP, OPCODE_ORA, OPCODE_ASL, OPCODE_SLO,
+  OPCODE_CLC, OPCODE_ORA, OPCODE_NOP, OPCODE_SLO, OPCODE_NOP, OPCODE_ORA, OPCODE_ASL, OPCODE_SLO,
+  OPCODE_JSR, OPCODE_AND, OPCODE_NOP, OPCODE_RLA, OPCODE_BIT, OPCODE_AND, OPCODE_ROL, OPCODE_RLA,
+  OPCODE_PLP, OPCODE_AND, OPCODE_ROL, OPCODE_NOP, OPCODE_BIT, OPCODE_AND, OPCODE_ROL, OPCODE_RLA,
+  OPCODE_BMI, OPCODE_AND, OPCODE_NOP, OPCODE_RLA, OPCODE_NOP, OPCODE_AND, OPCODE_ROL, OPCODE_RLA,
+  OPCODE_SEC, OPCODE_AND, OPCODE_NOP, OPCODE_RLA, OPCODE_NOP, OPCODE_AND, OPCODE_ROL, OPCODE_RLA,
+  OPCODE_RTI, OPCODE_EOR, OPCODE_NOP, OPCODE_SRE, OPCODE_NOP, OPCODE_EOR, OPCODE_LSR, OPCODE_SRE,
+  OPCODE_PHA, OPCODE_EOR, OPCODE_LSR, OPCODE_NOP, OPCODE_JMP, OPCODE_EOR, OPCODE_LSR, OPCODE_SRE,
+  OPCODE_BVC, OPCODE_EOR, OPCODE_NOP, OPCODE_SRE, OPCODE_NOP, OPCODE_EOR, OPCODE_LSR, OPCODE_SRE,
+  OPCODE_CLI, OPCODE_EOR, OPCODE_NOP, OPCODE_SRE, OPCODE_NOP, OPCODE_EOR, OPCODE_LSR, OPCODE_SRE,
+  OPCODE_RTS, OPCODE_ADC, OPCODE_NOP, OPCODE_RRA, OPCODE_NOP, OPCODE_ADC, OPCODE_ROR, OPCODE_RRA,
+  OPCODE_PLA, OPCODE_ADC, OPCODE_ROR, OPCODE_NOP, OPCODE_JMP, OPCODE_ADC, OPCODE_ROR, OPCODE_RRA,
+  OPCODE_BVS, OPCODE_ADC, OPCODE_NOP, OPCODE_RRA, OPCODE_NOP, OPCODE_ADC, OPCODE_ROR, OPCODE_RRA,
+  OPCODE_SEI, OPCODE_ADC, OPCODE_NOP, OPCODE_RRA, OPCODE_NOP, OPCODE_ADC, OPCODE_ROR, OPCODE_RRA,
+  OPCODE_NOP, OPCODE_STA, OPCODE_NOP, OPCODE_SAX, OPCODE_STY, OPCODE_STA, OPCODE_STX, OPCODE_SAX,
+  OPCODE_DEY, OPCODE_NOP, OPCODE_TXA, OPCODE_NOP, OPCODE_STY, OPCODE_STA, OPCODE_STX, OPCODE_SAX,
+  OPCODE_BCC, OPCODE_STA, OPCODE_NOP, OPCODE_NOP, OPCODE_STY, OPCODE_STA, OPCODE_STX, OPCODE_SAX,
+  OPCODE_TYA, OPCODE_STA, OPCODE_TXS, OPCODE_NOP, OPCODE_NOP, OPCODE_STA, OPCODE_NOP, OPCODE_NOP,
+  OPCODE_LDY, OPCODE_LDA, OPCODE_LDX, OPCODE_LAX, OPCODE_LDY, OPCODE_LDA, OPCODE_LDX, OPCODE_LAX,
+  OPCODE_TAY, OPCODE_LDA, OPCODE_TAX, OPCODE_NOP, OPCODE_LDY, OPCODE_LDA, OPCODE_LDX, OPCODE_LAX,
+  OPCODE_BCS, OPCODE_LDA, OPCODE_NOP, OPCODE_LAX, OPCODE_LDY, OPCODE_LDA, OPCODE_LDX, OPCODE_LAX,
+  OPCODE_CLV, OPCODE_LDA, OPCODE_TSX, OPCODE_LAX, OPCODE_LDY, OPCODE_LDA, OPCODE_LDX, OPCODE_LAX,
+  OPCODE_CPY, OPCODE_CMP, OPCODE_NOP, OPCODE_DCP, OPCODE_CPY, OPCODE_CMP, OPCODE_DEC, OPCODE_DCP,
+  OPCODE_INY, OPCODE_CMP, OPCODE_DEX, OPCODE_NOP, OPCODE_CPY, OPCODE_CMP, OPCODE_DEC, OPCODE_DCP,
+  OPCODE_BNE, OPCODE_CMP, OPCODE_NOP, OPCODE_DCP, OPCODE_NOP, OPCODE_CMP, OPCODE_DEC, OPCODE_DCP,
+  OPCODE_CLD, OPCODE_CMP, OPCODE_NOP, OPCODE_DCP, OPCODE_NOP, OPCODE_CMP, OPCODE_DEC, OPCODE_DCP,
+  OPCODE_CPX, OPCODE_SBC, OPCODE_NOP, OPCODE_ISB, OPCODE_CPX, OPCODE_SBC, OPCODE_INC, OPCODE_ISB,
+  OPCODE_INX, OPCODE_SBC, OPCODE_NOP, OPCODE_SBC, OPCODE_CPX, OPCODE_SBC, OPCODE_INC, OPCODE_ISB,
+  OPCODE_BEQ, OPCODE_SBC, OPCODE_NOP, OPCODE_ISB, OPCODE_NOP, OPCODE_SBC, OPCODE_INC, OPCODE_ISB,
+  OPCODE_SED, OPCODE_SBC, OPCODE_NOP, OPCODE_ISB, OPCODE_NOP, OPCODE_SBC, OPCODE_INC, OPCODE_ISB
+  };
+
 /** Apply the addressing mode
  *
  * This is very ugly and inefficient but requires far less code space than a
  * table of function pointers.
  */
 static void applyMode(uint8_t opcode) {
-  switch(opcode) {
-    case 0x0c:
-    case 0x0d:
-    case 0x0e:
-    case 0x0f:
-    case 0x20:
-    case 0x2c:
-    case 0x2d:
-    case 0x2e:
-    case 0x2f:
-    case 0x4c:
-    case 0x4d:
-    case 0x4e:
-    case 0x4f:
-    case 0x6d:
-    case 0x6e:
-    case 0x6f:
-    case 0x8c:
-    case 0x8d:
-    case 0x8e:
-    case 0x8f:
-    case 0xac:
-    case 0xad:
-    case 0xae:
-    case 0xaf:
-    case 0xcc:
-    case 0xcd:
-    case 0xce:
-    case 0xcf:
-    case 0xec:
-    case 0xed:
-    case 0xee:
-    case 0xef:
-      abso();
-      break;
-    case 0x1c:
-    case 0x1d:
-    case 0x1e:
-    case 0x1f:
-    case 0x3c:
-    case 0x3d:
-    case 0x3e:
-    case 0x3f:
-    case 0x5c:
-    case 0x5d:
-    case 0x5e:
-    case 0x5f:
-    case 0x7c:
-    case 0x7d:
-    case 0x7e:
-    case 0x7f:
-    case 0x9c:
-    case 0x9d:
-    case 0xbc:
-    case 0xbd:
-    case 0xdc:
-    case 0xdd:
-    case 0xde:
-    case 0xdf:
-    case 0xfc:
-    case 0xfd:
-    case 0xfe:
-    case 0xff:
-      absx();
-      break;
-    case 0x19:
-    case 0x1b:
-    case 0x39:
-    case 0x3b:
-    case 0x59:
-    case 0x5b:
-    case 0x79:
-    case 0x7b:
-    case 0x99:
-    case 0x9b:
-    case 0x9e:
-    case 0x9f:
-    case 0xb9:
-    case 0xbb:
-    case 0xbe:
-    case 0xbf:
-    case 0xd9:
-    case 0xdb:
-    case 0xf9:
-    case 0xfb:
-      absy();
-      break;
-    case 0x09:
-    case 0x0b:
-    case 0x29:
-    case 0x2b:
-    case 0x49:
-    case 0x4b:
-    case 0x69:
-    case 0x6b:
-    case 0x80:
-    case 0x82:
-    case 0x89:
-    case 0x8b:
-    case 0xa0:
-    case 0xa2:
-    case 0xa9:
-    case 0xab:
-    case 0xc0:
-    case 0xc2:
-    case 0xc9:
-    case 0xcb:
-    case 0xe0:
-    case 0xe2:
-    case 0xe9:
-    case 0xeb:
-      imm();
-      break;
-    case 0x6c:
-      ind();
-      break;
-    case 0x01:
-    case 0x03:
-    case 0x21:
-    case 0x23:
-    case 0x41:
-    case 0x43:
-    case 0x61:
-    case 0x63:
-    case 0x81:
-    case 0x83:
-    case 0xa1:
-    case 0xa3:
-    case 0xc1:
-    case 0xc3:
-    case 0xe1:
-    case 0xe3:
-      indx();
-      break;
-    case 0x11:
-    case 0x13:
-    case 0x31:
-    case 0x33:
-    case 0x51:
-    case 0x53:
-    case 0x71:
-    case 0x73:
-    case 0x91:
-    case 0x93:
-    case 0xb1:
-    case 0xb3:
-    case 0xd1:
-    case 0xd3:
-    case 0xf1:
-    case 0xf3:
-      indy();
-      break;
-    case 0x10:
-    case 0x30:
-    case 0x50:
-    case 0x70:
-    case 0x90:
-    case 0xb0:
-    case 0xd0:
-    case 0xf0:
-      rel();
-      break;
-    case 0x04:
-    case 0x05:
-    case 0x06:
-    case 0x07:
-    case 0x24:
-    case 0x25:
-    case 0x26:
-    case 0x27:
-    case 0x44:
-    case 0x45:
-    case 0x46:
-    case 0x47:
-    case 0x64:
-    case 0x65:
-    case 0x66:
-    case 0x67:
-    case 0x84:
-    case 0x85:
-    case 0x86:
-    case 0x87:
-    case 0xa4:
-    case 0xa5:
-    case 0xa6:
-    case 0xa7:
-    case 0xc4:
-    case 0xc5:
-    case 0xc6:
-    case 0xc7:
-    case 0xe4:
-    case 0xe5:
-    case 0xe6:
-    case 0xe7:
-      zp();
-      break;
-    case 0x14:
-    case 0x15:
-    case 0x16:
-    case 0x17:
-    case 0x34:
-    case 0x35:
-    case 0x36:
-    case 0x37:
-    case 0x54:
-    case 0x55:
-    case 0x56:
-    case 0x57:
-    case 0x74:
-    case 0x75:
-    case 0x76:
-    case 0x77:
-    case 0x94:
-    case 0x95:
-    case 0xb4:
-    case 0xb5:
-    case 0xd4:
-    case 0xd5:
-    case 0xd6:
-    case 0xd7:
-    case 0xf4:
-    case 0xf5:
-    case 0xf6:
-    case 0xf7:
-      zpx();
-      break;
-    case 0x96:
-    case 0x97:
-    case 0xb6:
-    case 0xb7:
-      zpy();
-      break;
+  uint8_t id = g_MODE[opcode];
+  switch(id) {
+    case MODE_ABSO: abso(); break;
+    case MODE_ABSX: absx(); break;
+    case MODE_ABSY: absy(); break;
+    case MODE_IMM: imm(); break;
+    case MODE_IND: ind(); break;
+    case MODE_INDX: indx(); break;
+    case MODE_INDY: indy(); break;
+    case MODE_REL: rel(); break;
+    case MODE_ZP: zp(); break;
+    case MODE_ZPX: zpx(); break;
+    case MODE_ZPY: zpy(); break;
     }
   }
 
@@ -906,337 +842,71 @@ static void applyMode(uint8_t opcode) {
  * table of function pointers.
  */
 static void applyOpcode(uint8_t opcode) {
-  switch(opcode) {
-    case 0x61:
-    case 0x65:
-    case 0x69:
-    case 0x6d:
-    case 0x71:
-    case 0x75:
-    case 0x79:
-    case 0x7d:
-      adc();
-      break;
-    case 0x21:
-    case 0x25:
-    case 0x29:
-    case 0x2d:
-    case 0x31:
-    case 0x35:
-    case 0x39:
-    case 0x3d:
-      and();
-      break;
-    case 0x06:
-    case 0x0a:
-    case 0x0e:
-    case 0x16:
-    case 0x1e:
-      asl();
-      break;
-    case 0x90:
-      bcc();
-      break;
-    case 0xb0:
-      bcs();
-      break;
-    case 0xf0:
-      beq();
-      break;
-    case 0x24:
-    case 0x2c:
-      bit();
-      break;
-    case 0x30:
-      bmi();
-      break;
-    case 0xd0:
-      bne();
-      break;
-    case 0x10:
-      bpl();
-      break;
-    case 0x00:
-      brk();
-      break;
-    case 0x50:
-      bvc();
-      break;
-    case 0x70:
-      bvs();
-      break;
-    case 0x18:
-      clc();
-      break;
-    case 0xd8:
-      cld();
-      break;
-    case 0x58:
-      cli();
-      break;
-    case 0xb8:
-      clv();
-      break;
-    case 0xc1:
-    case 0xc5:
-    case 0xc9:
-    case 0xcd:
-    case 0xd1:
-    case 0xd5:
-    case 0xd9:
-    case 0xdd:
-      cmp();
-      break;
-    case 0xe0:
-    case 0xe4:
-    case 0xec:
-      cpx();
-      break;
-    case 0xc0:
-    case 0xc4:
-    case 0xcc:
-      cpy();
-      break;
-    case 0xc3:
-    case 0xc7:
-    case 0xcf:
-    case 0xd3:
-    case 0xd7:
-    case 0xdb:
-    case 0xdf:
-      dcp();
-      break;
-    case 0xc6:
-    case 0xce:
-    case 0xd6:
-    case 0xde:
-      dec();
-      break;
-    case 0xca:
-      dex();
-      break;
-    case 0x88:
-      dey();
-      break;
-    case 0x41:
-    case 0x45:
-    case 0x49:
-    case 0x4d:
-    case 0x51:
-    case 0x55:
-    case 0x59:
-    case 0x5d:
-      eor();
-      break;
-    case 0xe6:
-    case 0xee:
-    case 0xf6:
-    case 0xfe:
-      inc();
-      break;
-    case 0xe8:
-      inx();
-      break;
-    case 0xc8:
-      iny();
-      break;
-    case 0xe3:
-    case 0xe7:
-    case 0xef:
-    case 0xf3:
-    case 0xf7:
-    case 0xfb:
-    case 0xff:
-      isb();
-      break;
-    case 0x4c:
-    case 0x6c:
-      jmp();
-      break;
-    case 0x20:
-      jsr();
-      break;
-    case 0xa3:
-    case 0xa7:
-    case 0xaf:
-    case 0xb3:
-    case 0xb7:
-    case 0xbb:
-    case 0xbf:
-      lax();
-      break;
-    case 0xa1:
-    case 0xa5:
-    case 0xa9:
-    case 0xad:
-    case 0xb1:
-    case 0xb5:
-    case 0xb9:
-    case 0xbd:
-      lda();
-      break;
-    case 0xa2:
-    case 0xa6:
-    case 0xae:
-    case 0xb6:
-    case 0xbe:
-      ldx();
-      break;
-    case 0xa0:
-    case 0xa4:
-    case 0xac:
-    case 0xb4:
-    case 0xbc:
-      ldy();
-      break;
-    case 0x46:
-    case 0x4a:
-    case 0x4e:
-    case 0x56:
-    case 0x5e:
-      lsr();
-      break;
-    case 0x01:
-    case 0x05:
-    case 0x09:
-    case 0x0d:
-    case 0x11:
-    case 0x15:
-    case 0x19:
-    case 0x1d:
-      ora();
-      break;
-    case 0x48:
-      pha();
-      break;
-    case 0x08:
-      php();
-      break;
-    case 0x68:
-      pla();
-      break;
-    case 0x28:
-      plp();
-      break;
-    case 0x23:
-    case 0x27:
-    case 0x2f:
-    case 0x33:
-    case 0x37:
-    case 0x3b:
-    case 0x3f:
-      rla();
-      break;
-    case 0x26:
-    case 0x2a:
-    case 0x2e:
-    case 0x36:
-    case 0x3e:
-      rol();
-      break;
-    case 0x66:
-    case 0x6a:
-    case 0x6e:
-    case 0x76:
-    case 0x7e:
-      ror();
-      break;
-    case 0x63:
-    case 0x67:
-    case 0x6f:
-    case 0x73:
-    case 0x77:
-    case 0x7b:
-    case 0x7f:
-      rra();
-      break;
-    case 0x40:
-      rti();
-      break;
-    case 0x60:
-      rts();
-      break;
-    case 0x83:
-    case 0x87:
-    case 0x8f:
-    case 0x97:
-      sax();
-      break;
-    case 0xe1:
-    case 0xe5:
-    case 0xe9:
-    case 0xeb:
-    case 0xed:
-    case 0xf1:
-    case 0xf5:
-    case 0xf9:
-    case 0xfd:
-      sbc();
-      break;
-    case 0x38:
-      sec();
-      break;
-    case 0xf8:
-      sed();
-      break;
-    case 0x78:
-      sei();
-      break;
-    case 0x03:
-    case 0x07:
-    case 0x0f:
-    case 0x13:
-    case 0x17:
-    case 0x1b:
-    case 0x1f:
-      slo();
-      break;
-    case 0x43:
-    case 0x47:
-    case 0x4f:
-    case 0x53:
-    case 0x57:
-    case 0x5b:
-    case 0x5f:
-      sre();
-      break;
-    case 0x81:
-    case 0x85:
-    case 0x8d:
-    case 0x91:
-    case 0x95:
-    case 0x99:
-    case 0x9d:
-      sta();
-      break;
-    case 0x86:
-    case 0x8e:
-    case 0x96:
-      stx();
-      break;
-    case 0x84:
-    case 0x8c:
-    case 0x94:
-      sty();
-      break;
-    case 0xaa:
-      tax();
-      break;
-    case 0xa8:
-      tay();
-      break;
-    case 0xba:
-      tsx();
-      break;
-    case 0x8a:
-      txa();
-      break;
-    case 0x9a:
-      txs();
-      break;
-    case 0x98:
-      tya();
-      break;
+  uint8_t id = g_OPCODE[opcode];
+  switch(id) {
+    case OPCODE_ADC: adc(); break;
+    case OPCODE_AND: and(); break;
+    case OPCODE_ASL: asl(); break;
+    case OPCODE_BCC: bcc(); break;
+    case OPCODE_BCS: bcs(); break;
+    case OPCODE_BEQ: beq(); break;
+    case OPCODE_BIT: bit(); break;
+    case OPCODE_BMI: bmi(); break;
+    case OPCODE_BNE: bne(); break;
+    case OPCODE_BPL: bpl(); break;
+    case OPCODE_BRK: brk(); break;
+    case OPCODE_BVC: bvc(); break;
+    case OPCODE_BVS: bvs(); break;
+    case OPCODE_CLC: clc(); break;
+    case OPCODE_CLD: cld(); break;
+    case OPCODE_CLI: cli(); break;
+    case OPCODE_CLV: clv(); break;
+    case OPCODE_CMP: cmp(); break;
+    case OPCODE_CPX: cpx(); break;
+    case OPCODE_CPY: cpy(); break;
+    case OPCODE_DCP: dcp(); break;
+    case OPCODE_DEC: dec(); break;
+    case OPCODE_DEX: dex(); break;
+    case OPCODE_DEY: dey(); break;
+    case OPCODE_EOR: eor(); break;
+    case OPCODE_INC: inc(); break;
+    case OPCODE_INX: inx(); break;
+    case OPCODE_INY: iny(); break;
+    case OPCODE_ISB: isb(); break;
+    case OPCODE_JMP: jmp(); break;
+    case OPCODE_JSR: jsr(); break;
+    case OPCODE_LAX: lax(); break;
+    case OPCODE_LDA: lda(); break;
+    case OPCODE_LDX: ldx(); break;
+    case OPCODE_LDY: ldy(); break;
+    case OPCODE_LSR: lsr(); break;
+    case OPCODE_ORA: ora(); break;
+    case OPCODE_PHA: pha(); break;
+    case OPCODE_PHP: php(); break;
+    case OPCODE_PLA: pla(); break;
+    case OPCODE_PLP: plp(); break;
+    case OPCODE_RLA: rla(); break;
+    case OPCODE_ROL: rol(); break;
+    case OPCODE_ROR: ror(); break;
+    case OPCODE_RRA: rra(); break;
+    case OPCODE_RTI: rti(); break;
+    case OPCODE_RTS: rts(); break;
+    case OPCODE_SAX: sax(); break;
+    case OPCODE_SBC: sbc(); break;
+    case OPCODE_SEC: sec(); break;
+    case OPCODE_SED: sed(); break;
+    case OPCODE_SEI: sei(); break;
+    case OPCODE_SLO: slo(); break;
+    case OPCODE_SRE: sre(); break;
+    case OPCODE_STA: sta(); break;
+    case OPCODE_STX: stx(); break;
+    case OPCODE_STY: sty(); break;
+    case OPCODE_TAX: tax(); break;
+    case OPCODE_TAY: tay(); break;
+    case OPCODE_TSX: tsx(); break;
+    case OPCODE_TXA: txa(); break;
+    case OPCODE_TXS: txs(); break;
+    case OPCODE_TYA: tya(); break;
     }
   }
 
