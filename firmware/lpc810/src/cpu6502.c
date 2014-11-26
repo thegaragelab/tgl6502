@@ -48,20 +48,26 @@
 
 
 //flag calculation macros
-#define zerocalc(n) {\
-    if ((n) & 0x00FF) clearzero();\
-        else setzero();\
-}
+static void zerocalc(uint8_t n) {
+  if ((n) & 0x00FF)
+    clearzero();
+  else
+    setzero();
+  }
 
-#define signcalc(n) {\
-    if ((n) & 0x0080) setsign();\
-        else clearsign();\
-}
+static void signcalc(uint8_t n) {
+  if ((n) & 0x0080)
+    setsign();
+  else
+    clearsign();
+  }
 
-#define carrycalc(n) {\
-    if ((n) & 0xFF00) setcarry();\
-        else clearcarry();\
-}
+static void carrycalc(uint8_t n) {
+  if ((n) & 0xFF00)
+    setcarry();
+  else
+    clearcarry();
+  }
 
 #define overflowcalc(n, m, o) { /* n = result, m = accumulator, o = memory */ \
     if (((n) ^ (uint16_t)(m)) & ((n) ^ (o)) & 0x0080) setoverflow();\
@@ -98,12 +104,6 @@ uint8_t pull8() {
   }
 
 //addressing mode functions, calculates effective addresses
-static void imp() { //implied
-  }
-
-static void acc() { //accumulator
-  }
-
 static void imm() { //immediate
   ea = g_cpuState.m_pc++;
   }
@@ -466,10 +466,6 @@ static void lsr() {
   putvalue(result);
   }
 
-static void nop() {
-  // Do nothing
-  }
-
 static void ora() {
   value = getvalue();
   result = (uint16_t)g_cpuState.m_a | value;
@@ -622,7 +618,6 @@ static void tya() {
   }
 
 //undocumented instructions
-#ifdef UNDOCUMENTED
 static void lax() {
   lda();
   ldx();
@@ -663,16 +658,6 @@ static void rra() {
   ror();
   adc();
   }
-#else
-    #define lax nop
-    #define sax nop
-    #define dcp nop
-    #define isb nop
-    #define slo nop
-    #define rla nop
-    #define sre nop
-    #define rra nop
-#endif
 
 /** Apply the addressing mode
  *
@@ -767,12 +752,6 @@ static void applyMode(uint8_t opcode) {
     case 0xfb:
       absy();
       break;
-    case 0x0a:
-    case 0x2a:
-    case 0x4a:
-    case 0x6a:
-      acc();
-      break;
     case 0x09:
     case 0x0b:
     case 0x29:
@@ -798,51 +777,6 @@ static void applyMode(uint8_t opcode) {
     case 0xe9:
     case 0xeb:
       imm();
-      break;
-    case 0x00:
-    case 0x02:
-    case 0x08:
-    case 0x12:
-    case 0x18:
-    case 0x1a:
-    case 0x22:
-    case 0x28:
-    case 0x32:
-    case 0x38:
-    case 0x3a:
-    case 0x40:
-    case 0x42:
-    case 0x48:
-    case 0x52:
-    case 0x58:
-    case 0x5a:
-    case 0x60:
-    case 0x62:
-    case 0x68:
-    case 0x72:
-    case 0x78:
-    case 0x7a:
-    case 0x88:
-    case 0x8a:
-    case 0x92:
-    case 0x98:
-    case 0x9a:
-    case 0xa8:
-    case 0xaa:
-    case 0xb2:
-    case 0xb8:
-    case 0xba:
-    case 0xc8:
-    case 0xca:
-    case 0xd2:
-    case 0xd8:
-    case 0xda:
-    case 0xe8:
-    case 0xea:
-    case 0xf2:
-    case 0xf8:
-    case 0xfa:
-      imp();
       break;
     case 0x6c:
       ind();
@@ -1161,60 +1095,6 @@ static void applyOpcode(uint8_t opcode) {
     case 0x56:
     case 0x5e:
       lsr();
-      break;
-    case 0x02:
-    case 0x04:
-    case 0x0b:
-    case 0x0c:
-    case 0x12:
-    case 0x14:
-    case 0x1a:
-    case 0x1c:
-    case 0x22:
-    case 0x2b:
-    case 0x32:
-    case 0x34:
-    case 0x3a:
-    case 0x3c:
-    case 0x42:
-    case 0x44:
-    case 0x4b:
-    case 0x52:
-    case 0x54:
-    case 0x5a:
-    case 0x5c:
-    case 0x62:
-    case 0x64:
-    case 0x6b:
-    case 0x72:
-    case 0x74:
-    case 0x7a:
-    case 0x7c:
-    case 0x80:
-    case 0x82:
-    case 0x89:
-    case 0x8b:
-    case 0x92:
-    case 0x93:
-    case 0x9b:
-    case 0x9c:
-    case 0x9e:
-    case 0x9f:
-    case 0xab:
-    case 0xb2:
-    case 0xc2:
-    case 0xcb:
-    case 0xd2:
-    case 0xd4:
-    case 0xda:
-    case 0xdc:
-    case 0xe2:
-    case 0xea:
-    case 0xf2:
-    case 0xf4:
-    case 0xfa:
-    case 0xfc:
-      nop();
       break;
     case 0x01:
     case 0x05:
