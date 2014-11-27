@@ -1,0 +1,317 @@
+
+
+
+
+
+
+
+
+
+
+
+
+ Last update: 06/07/07
+ S/O/S SyMon III monitor/sub-assembler quick reference 
+ copyright (c) 1990, 2007 By Brian M. Phelps
+
+ S/O/S SyMon III is a SYstem MONitor program for the 6502/65c02 family of microprocessors
+ S/O/S sub-assembler is a single-pass mnemonic assembler/disassembler for the 6502/65c02
+
+ Default serial port settings:
+ BAUD rate: 19.2k
+ Parity: None
+ Data bits: 8
+ Stop bits: 1
+ Handshaking: None, (three-wire RS-232 interface)
+
+
+ RAM used by S/O/S SyMon III:
+
+ System variables ZERO-PAGE usage:
+ $00B0 - $00FF
+ 
+ $0100 - $017F User STACK.
+ $0180 - $01FF S/O/S system STACK
+ $0200 - $02FF Terminal keystroke input buffer. (terminal keystroke input generates BIOS handled IRQ's)
+ $0300 - $03FF Reserved for user NMI vector code. You may put your NMI handler code here.
+ $0400 - $04FF Reserved for monitor USER ( [CNTL-U] ) command. You may put whatever code you
+                want here to run when the monitor [CNTL-U] command is entered.  
+
+ Minimum available user RAM :
+
+ ZERO-PAGE:
+ $0000 - $00AF
+
+ APPLICATION:
+ $0500 - $7FFF (31488 bytes, assuming RAM is 32768 bytes total)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ S/O/S SyMon III monitor commands:
+
+ A = {ACCUMULATOR} Examine/change the ACCUMULATOR preset/result register's contents
+ B = {BYTE} Examine the ACCUMULATOR preset/result register's contents
+ C = {CHANGE} Examine/change one or more memory location's contents
+ D = {DUMP} Examine (in hex) the contents of 256 consecutive memory locations
+ E = {EXAMINE} Examine a memory location's contents
+ F = {FILL} Fill consecutive memory locations with a specified value
+ G = {GO} Begin program execution at a specified memory location
+ H = {HEX TO DECIMAL} Convert an entered hex value (up to 8 digits) to a decimal value
+ I = {INPUT} Request a keystroke from terminal and store it in ACCUMULATOR preset/result register
+ J = {DECIMAL TO HEX} Convert a decimal value (max value = 4,294,967,295 ) to a hex value
+ K = {LOCATE BYTE STRING} Search memory for a specified byte string (16 bytes max)
+ L = {LOCATE TEXT STRING} Search memory for a specified text string (16 characters max)
+ M = {MOVE} Copy a specified memory range to memory
+ N = {NOTHING} Do nothing, send an ASCII [BELL] to terminal 
+ O = {OUTPUT} Send (verbatim) the contents of the ACCUMULATOR preset/result register to terminal
+ P = {PROCESSOR} Examine/change the PROCESSOR STATUS preset/result register's contents
+ Q = {QUERY} Show the list of useful system subroutine addresses 
+ R = {REGISTERS} Examine the contents of ALL preset/result registers
+ S = {STACK POINTER} Examine/change the STACK POINTER preset/result register's contents
+ T = {TEXT DUMP} Examine (in printable ASCII) the contents of 256 consecutive memory locations
+ U = {UPLOAD} Send a hex dump list to terminal or another system running S/O/S SyMon III   
+ V = {VIEW TEXT} View text from a specified memory location
+ W = {WATCH} Continuously examine a specified memory location's contents (loops until keystroke) 
+ X = {X REGISTER} Examine/change the X REGISTER preset/result register's contents
+ Y = {Y REGISTER} Examine/change the Y REGISTER preset/result register's contents
+ Z = {TEXT EDITOR} Enter keystrokes directly into a specified memory area ([BACKSPACE] erases, 
+      [ESC] key exits)
+ [BREAK] = {BREAK} Interrupt any current task then return control to SyMon III monitor
+ [SPACE] = {SPACE} Send an ASCII [SPACE],[LINEFEED],[RETURN] to terminal
+ [.] = {PERIOD} Perform a do-nothing delay of a specified length
+ [,] = {WAIT} Perform a do-nothing delay of length specified in previous [.] {PERIOD} command
+ [(] = {NEW MACRO} Start new keystroke macro
+ [)] = {RUN MACRO} Run keystroke macro 
+ [ESC]  = {ESCAPE} Terminate/exit command function
+ [CNTL-A] = {ASSEMBLER} Run the S/O/S sub-assembler utility
+ [CNTL-D] = {DOWNLOAD} Download a dump list from terminal or another system running SyMon III
+ [CNTL-L] = {LIST} Disassemble instructions from specified address
+ [CNTL-R] = {RESET} Restart S/O/S SyMon III
+ [CNTL-U] = {USER PROGRAM} Same as monitor "G = {GO}" command except that the start address
+             is assumed to be $0400.
+ [CNTL-W] = {WIPE RAM MEMORY} Fill RAM ($0000 - $7FFF) with $00 then restart
+             S/O/S SyMon III  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Useful S/O/S SyMon III system subroutines:
+
+$E138 CHIN    {CHARACTER INPUT} Wait for a keystroke from terminal. Returns keystroke in
+               ACCUMULATOR
+$E15A COUT    {CHARACTER OUTPUT} Send byte in ACCUMULATOR to terminal
+$E157 COUT2   {CHARACTER OUTPUT TWICE} Calls COUT two times
+$E18B CROUT   {CARRIAGE RETURN OUTPUT} Send ASCII [LINEFEED], [RETURN] to terminal
+$E188 CR2     {CARRIAGE RETURN OUTPUT TWICE} Calls CROUT two times
+$E5A0 SPC2    {SPACE OUTPUT TWICE} Send ASCII [SPACE] to terminal two times
+$E59D SPC4    {SPACE OUTPUT FOUR TIMES} Calls SPC2 two times
+$E3F0 PRASC   {PRINT ASCII} Send byte in ACCUMULATOR to terminal only if it is a
+               printable ASCII character (bit-7 is ignored). If byte is not printable ASCII then
+               send ASCII "." to terminal  
+$E183 DOLLAR  {DOLLAR OUTPUT} Send ASCII "$" to terminal 
+$E3FD PRBYTE  {PRINT BYTE} Send to terminal two ASCII hexadecimal digits representing the
+               byte in the ACCUMULATOR
+$E40E PRINDX  {PRINT INDEX} Send four hexadecimal digits representing the
+               contents of the 16-bit system variable INDEX to terminal. (high byte first)
+               INDEXH ($C9 = high byte), INDEX ($C8 = low byte)
+$E357 INCINDX {INCREMENT INDEX} Increment 16-bit variable INDEX ($C8), INDEXH ($C9)
+$E41B PROMPT  {PRINT A STRING} Send specified string to terminal. Address of 256-byte
+               string(s) array is pointed to by 16-bit system variable PROLO ($C2 = low byte),
+               PROHI ($C3 = high byte). ACCUMULATOR contains string # to print. All
+               strings in array MUST be preceeded by an ASCII [NULL] ($00). Last string in array
+               MUST be followed by an ASCII [NULL] ($00)
+$E97A PROMPT2 {PRINT A LONG STRING} Send a long string to terminal. Address of long string 
+               is pointed to by 16-bit system variable INDEX ($C8=low byte), 
+               INDEXH ($C9=high byte). Long strings may be any length and MUST be followed
+               by an ASCII [NULL] ($00). 
+$E10D BEEP    {BELL OUTPUT} Send ASCII [BELL] to terminal
+$E198 DELAY1  {DELAY SHORT} Perform a do-nothing loop (n) times where (n) = value contained
+               in 8-bit system variable DELLO ($C0)
+               (value = $01 = shortest delay, $00 = longest delay)
+$E19D DELAY2  {DELAY MEDIUM} Calls DELAY1 (n) times where (n) = value contained in 8-bit
+               system variable DELHI ($C1)
+               (value = $01 = shortest delay, $00 = longest delay)
+$E578 SET     {SET DELAY LONG} Copy byte in X-REGISTER to 8-bit system variable SETIM
+               ($D8) then call DELAY2 (n) times where (n) = value contained in SETIM ($D8)
+               (value = $01 = shortest delay, $00 = longest delay)
+$E57A TIMER   {DELAY LONG} Call DELAY2 (n) times where (n) = value contained in 8-bit
+               system variable SETIM ($D8) (value = $01 = shortest delay, $00 = longest delay)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Useful S/O/S SyMon III system subroutines (cont'd):
+
+$E44D RDLINE  {READ LINE} Setup an input buffer of length (n) beginning at address (a, a+1) and
+               request a string from terminal.
+               (n) (buffer length) = value in X-REGISTER,
+               (a) (buffer address low byte) = value in Y-REGISTER,
+               (a+1) (buffer address high byte) = value in ACCUMULATOR.
+               Lower case alpha. are converted to upper-case.
+               System variable LOKOUT ($D9): IF = $00, will allow all keystrokes.
+               IF = $80, will allow only valid HEXADECIMAL digits (upper- or lower-case alpha)
+               IF = $FF, will allow only valid DECIMAL digits. 
+$E115 BN2ASC  {BYTE TO ASCII} Convert byte in ACCUMULATOR to two ASCII hexadecimal
+               digits. Returns with low digit in Y-REGISTER, high digit in ACCUMULATOR
+$E000 ASC2BN  {ASCII TO BYTE} Convert two ASCII hexadecimal digits into a byte. Call with low
+               digit in Y-REGISTER, high digit in ACCUMULATOR. Returns with byte value in
+               ACCUMULATOR. NOTE: All Alpha. digits (A thru F) MUST BE UPPER CASE
+$E1B9 HEXIN   {HEXADECIMAL INPUT} Request a 1-to-4 digit hexadecimal value from terminal.
+               Call with ACCUMULATOR = maximum # of digit entries allowed (1-to-4 only).
+               If 3 or 4 digits are requested, returns with  result in 16-bit system variable INDEX 
+               ($C8 = low byte), INDEXH ($C9 = high byte); X-REGISTER = # of digits entered;
+               ACCUMULATOR = low byte of result.
+               If 1 or 2 digits are requested, returns with result in ACCUMULATOR;
+               X-REGISTER = # of digits entered
+$E1B3 HEXIN2  {HEXADECIMAL INPUT 2} Request a 1-to-2 digit hexadecimal value from terminal. 
+               Result in ACCUMULATOR (see HEXIN)    
+$E1B7 HEXIN4  {HEXADECIMAL INPUT 4} Request a 1-to-4 digit hexadecimal value from terminal. 
+               Result in INDEX, INDEXH (see HEXIN)
+$E5D5 DECIN   {DECIMAL INPUT} Request a 1-to-10 digit decimal value input from terminal.
+               BCD result will be stored as follows:     HEX result will be stored as follows:
+               DEC0AND1 ($E5) most significant           HEX0AND1 ($E1) most significant
+               DEC2AND3 ($E6)                            HEX2AND3 ($E2)
+               DEC4AND5 ($E7)                            HEX4AND5 ($E3)
+               DEC6AND7 ($E8)                            HEX6AND7 ($E4) least significant 
+               DEC8AND9 ($E9) least significant 
+               (Refer to USER'S GUIDE for additional information)
+$E4C6 SAVREGS {SAVE REGISTERS} Push ACCUMULATOR, X,Y REGISTERS onto STACK
+$E4B0 RESREGS {RESTORE REGISTERS} Pull ACCUMULATOR, X,Y REGISTERS from STACK
+ 
+S/O/S SyMon III vectors:
+
+$EAF4 COLDSTRT {RESET VECTOR} Restart S/O/S SyMon III
+$EB55 NMON     {NEW MONITOR} Warmstart SyMon III monitor  without parameter init.
+                (except PROLO,PROHI: points to the monitor's prompt string array) 
+$0300 NMI      {NMI VECTOR} (Upon sensing  NMI input  = 0 , program execution will
+                commence at $0300: your NMI handler may be located here)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+S/O/S  sub-assembler: (To run the sub-assembler, strike [CNTL-A] )
+The assembler responds with a logon message and asks for an 'Origin'. This is where the you
+specify the memory address at which to begin assembling/disassembling program code. Valid entries are
+anywhere within the range $0 to $FFFF. For example:
+
+From the monitor prompt, strike [CNTL-A]  
+SyMon responds:
+
+M-
+
+Assembler:
+
+Origin: $
+
+You may now type in a valid hex address (for this example 1000), then strike [RETURN]
+Sub-assembler responds: 
+
+M-
+
+Assembler:
+
+Origin: $1000
+$1000-
+
+You may now proceed by typing in valid 6502 mnemonic instructions or by issuing a DIRECTIVE.
+ List of DIRECTIVES ([.] means strike the period key) :
+
+    [ESC]   = Quit S/O/S Sub-assembler, return to SyMon III monitor  
+   [SPACE]  = Disassemble one instruction at the current address, then advance to the next
+               instruction address
+ [.] then A = AREG: Examine/change ACCUMULATOR preset/result
+ [.] then B = BYTE: Enter byte values directly into memory
+               A null entry will exit direct byte mode
+ [.] then G = GOTO: Execute code beginning at the last specified ORIGIN address.
+               A,X,Y,S,P processor registers will be pre-loaded from preset/result storage
+               before code execution begins. A,X,Y,S,P processor registers will be saved to 
+               preset/result storage upon return (normal RTS or BRK instruction)
+ [.] then I = INPUT: Display HEX equivalent of the next key struck 
+ [.] then L = LIST: Disassemble 21 consecutive instructions from a specified address or
+               (with null entry) the 'Origin' address. [N] key (and most others) will list the
+               next 21 consecutive instructions. [SPACE] will list one instruction at
+               a time. [RETURN] will exit the list function
+ [.] then O = ORIGIN: Select a different memory address from which to edit/list/execute code
+ [.] then P = PROCESSOR STATUS: Examine/change PROCESSOR STATUS preset/result 
+ [.] then Q = QUERY: Display list of useful system subroutine addresses
+ [.] then R = REGISTERS: Display all preset/result registers
+ [.] then S = SREG: Examine/change STACK POINTER preset/result
+ [.] then T = TEXT: Enter keystrokes directly into memory. [ESC] key exits this loop 
+ [.] then U = UP: Re-do the previous instruction. Use only once per assembled/disassembled
+               instruction
+ [.] then W = WORD: Enter word values directly into memory. Enter high byte,low byte.
+               Word is stored low-byte first per 6502 convention. If only one or two digits are
+               entered, the high byte is assumed to be $00
+               A null entry will exit direct word mode
+ [.] then X = XREG: Examine/change X REGISTER preset/result 
+ [.] then Y = YREG: Examine/change Y REGISTER preset/result 

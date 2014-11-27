@@ -1,0 +1,2113 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            S/O/S SyMon III user's guide
+
+                       Copyright (c)1990,2007 Brian M. Phelps
+
+                               last update: 05/10/07
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Table of contents:
+
+ Memory commands:
+  1.0  Examine a memory location's contents
+  1.1  Change one or more memory location's contents
+  1.3  HEX dump (display) a memory block's contents
+  1.4  Text dump (display) a memory block's contents
+  1.5  Fill a memory block with a specified value
+  1.6  Move (copy) a memory block to memory
+  1.7  Wipe (clear) all RAM memory
+  1.8  List (disassemble) a memory block
+
+  2.0  Register commands
+
+ Program control commands:
+  3.0  Execute program code at a specified address
+  3.1  execute user program code at address $400
+  3.2  Abort current process, return to monitor 
+  3.3  Reset (coldstart) SyMon III
+  3.4  Record command keystroke macro
+  3.5  Run command keystroke macro
+  3.6  Set delay duration
+  3.7  Perform delay
+
+ ASCII/HEX input/conversion commands:
+  4.0  Input ASCII
+  4.1  Output ASCII
+  4.2  Output HEX   
+  4.3  ASCII/HEX conversion examples
+
+ HEX/decimal input/conversion commands: 
+  5.0  Input HEX value, convert to BCD
+  5.1  Input decimal value, convert to HEX
+
+ Search commands:
+  6.0  Search memory for a byte string
+  6.1  Search memory for a text string
+
+ Program storage and retrieval commands:
+  7.0  Upload (send) program code/data to terminal or target system 
+  7.1  Download (receive) program code/data from terminal or target system
+
+ Text editor and viewer commands:
+  8.0  Text editor
+  8.1  Text viewer
+ 
+  9.0  Display system subroutine and I/O device addresses command
+  9.1  System subroutine descriptions
+
+  10.0  SyMon III RESET, NMI, IRQ vector addresses
+
+ S/O/S Sub-assembler command:
+  11.0  Starting the assembler
+  11.1  Assembler directives (commands)
+  11.2  Instruction entry methods
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.0 MEMORY COMMANDS
+
+
+
+ E = Examine a specified memory or I/O location's contents.
+
+     Type the letter "E" or "e"
+      SyMon responds:
+
+       M-E $
+
+     Type-in the 1-4 digit HEX address you want to examine, followed by
+     [RETURN]. (If you make a mistake while typing-in the address, use
+     the [BACKSPACE] key to delete the error then re-type.)
+     
+       M-E $aaaa:$bb
+
+       M-
+
+     In the example above, "aaaa" is the address you entered and "bb"
+     is the HEX value found at that address, followed by a fresh
+     MONITOR prompt (M-).
+     If [RETURN] is struck before any HEX address digits have been typed,
+     SyMon will display the contents of the last memory or I/O address
+     that was read.
+     You may exit this function (and most others) at any point by
+     striking the [ESCAPE] key.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.1 MEMORY COMMANDS (cont'd.)
+
+
+
+ C = Change a specified memory or I/O location's contents.
+
+     Type the letter "C" or "c"
+      SyMon responds:
+
+       M-C $
+
+     Type-in the HEX address you want to change, followed by [RETURN].
+
+       M-C $aaaa:$bb
+
+     In the example above, "aaaa" is the address you entered and "bb"
+     is the HEX value found at that address.
+     You may now alter the contents of that address by typing-in a 1-2
+     digit HEX value, followed by [RETURN].
+     
+       M-C $aaaa:$nn $bb
+
+     In the example above, "aaaa" is the address you entered and "nn"
+     is the HEX value you wrote to that address.
+     "bb" is the contents of the next consecutive address (aaaa + 1).
+     You may now change the contents of this next address by typing-in
+     a HEX value followed by [RETURN], or leave it unchanged by
+     striking [RETURN] before any HEX digits have been typed.
+     You may continue to enter as many bytes as you want; SyMon
+     automatically increments the 'change memory' address pointer
+     for each byte you enter. [ESCAPE] key will exit this function.
+
+     After each byte you enter, SyMon compares the value you entered to
+     the value read from the memory or I/O location you just 'changed'.
+     If the values match, the process will be as described above. 
+     If the values do not match, SyMon indicates this by following the
+     displayed value you entered with "<?". This will occur if you try to
+     change the contents of a ROM location, some I/O device locations, or
+     locations that are "open" or un-assigned (no memory or I/O devices
+     selected).        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.2 MEMORY COMMANDS (cont'd.)
+
+
+
+ W = Watch a specified memory or I/O location's contents for changes.
+     Once an address has been specified, SyMon will continuously read
+     from that address then update the displayed HEX value until a key
+     is struck. (This is useful for debugging interrupt service
+     routines and testing input device hardware.) 
+
+     Type the letter "W" or "w"
+      SyMon responds:
+
+       M-W $
+
+     Type-in the HEX address you want to watch, followed by [RETURN].
+
+       M-W $aaaa:$bb
+
+     In the example above, "aaaa" is the address you entered and "bb"
+     is the HEX value found at that address. If the value found at
+     address "aaaa" changes, so will the value shown at "bb" change on
+     the display. Any keystroke will exit this loop function.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.3 MEMORY COMMANDS (cont'd.)
+
+
+
+ D = Dump (display) in HEX the contents of $100 (256) consecutive
+     memory or I/O locations beginning at a specified address.
+
+     Type the letter "D" or "d"
+      SyMon responds:
+
+       M-D $
+
+     Type-in the HEX address you want to begin dumping, followed by
+     [RETURN].
+      SyMon responds:
+
+ M-D $aaaa:$
+     adrs+    00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     $aaaa    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1010    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1020    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1030    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1040    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1050    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1060    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1070    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1080    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $1090    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $10A0    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $10B0    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $10C0    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $10D0    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $10E0    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+     $10F0    BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB  BB
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     adrs+    00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F
+
+ M-
+
+     In the example above, "aaaa" is the address you entered and "BB" is
+     whatever HEX values were found within that $100 byte address block.
+     (In this example, the address entered is assumed to have been $1000)
+     You may dump the next consecutive $100 byte block by typing the "D or d"
+     command again and striking [RETURN] without typing-in an address.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.4 MEMORY COMMANDS (cont'd.)
+
+
+
+ T = Text dump (display) in ASCII the contents of $100 (256) consecutive
+     memory or I/O locations beginning at a specified address.
+
+     Type the letter "T" or "t"
+      SyMon responds:
+
+       M-T $
+
+     Type-in the HEX address you want to begin text dumping, followed by
+     [RETURN].
+      SyMon responds:
+
+ M-T $aaaa:$
+     adrs+    00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     $aaaa    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1010    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1020    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1030    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1040    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1050    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1060    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1070    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1080    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $1090    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $10A0    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $10B0    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $10C0    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $10D0    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $10E0    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+     $10F0    t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     adrs+    00  01  02  03  04  05  06  07  08  09  0A  0B  0C  0D  0E  0F
+
+ M-
+  
+     In the example above, "aaaa" is the address you entered and "t" is whatever
+     ASCII characters were found within that $100 byte address block. (In this
+     example, the address entered is assumed to have been $1000)
+     Any non-printable ASCII characters are represented as a period (.)
+     (Bit 7 is ignored and is assumed to be 0) 
+     You may dump the next consecutive $100 byte block by typing the "T or t"
+     command again and striking [RETURN] without typing-in an address. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.5 MEMORY COMMANDS (cont'd.)
+
+
+
+ F = Fill specified memory block with a specified HEX value.
+
+     Type the letter "F" or "f"
+      SyMon responds:
+
+       M-fill start: $
+
+     Type-in the HEX address at which you want to begin filling, followed by
+     [RETURN].
+      SyMon responds:
+
+       length: $
+
+     Type-in the HEX number of consecutive memory locations to fill, followed
+     by [RETURN]. The length may be anywhere from 0 to $FFFF. A length of 0
+     will exit with no bytes written.
+      SyMon responds:
+
+       value: $
+
+     Type-in HEX value to be written to the specified memory block, followed by
+     [RETURN].
+      SyMon responds:
+
+       [ESC] key exits, any other to proceed
+
+     The prompt shown above reminds that you are about to change the contents
+     of a block of memory; it allows you to double check the selected
+     parameters to make sure they are correct before performing the memory fill
+     process. Use the [ESCAPE] key at any point to exit this function. (a null
+     entry for any parameter will also exit)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.6 MEMORY COMMANDS (cont'd.)
+
+
+
+ M = Move (copy) memory block to memory. Memory copy source and destination
+     address ranges may overlap if you need them to; SyMon checks for such
+     overlaps then makes appropriate adjustments in the copy process to
+     compensate.
+
+     Type the letter "M" or "m"
+      SyMon responds:
+
+       move source: $
+
+     Type-in the HEX address of the beginning of the block of memory you want
+     to copy, followed by [RETURN]. 
+      SyMon responds:
+
+       destination: $
+
+     Type-in the HEX address of the beginning of memory where you want the copy
+     to be written, followed by [RETURN].
+      SyMon responds:
+
+       length: $
+
+     Type-in the HEX number of consecutive memory locations to copy, followed
+     by [RETURN]. The length may be anywhere from 0 to $FFFF. A length of 0
+     will exit with no bytes copied.
+      SyMon responds:
+
+       [ESC] key exits, any other to proceed
+
+     The prompt shown above reminds that you are about to change the contents
+     of a block of memory; it allows you to double check the selected
+     parameters to make sure they are correct before performing the memory copy
+     process. Use the [ESCAPE] key at any point to exit this function. (a null
+     entry for any paremeter will also exit)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.7 MEMORY COMMANDS (cont'd.)
+
+
+
+ [CNTL-W] = Wipe (clear) memory. This will write $00 to the entire RAM
+            memory address range $0000 - $7FFF, then perform a system coldstart
+            to re-initialize SyMon's zero-page system variables
+
+     Type [CNTL-W] or [CNTL-w]
+      SyMon responds:
+
+       M-Wipe RAM?
+       [ESC] key exits, any other to proceed
+
+     The prompt shown above reminds that you are about to clear the entire
+     RAM memory; it allows you to cancel the clear memory command.
+     Use the [ESCAPE] key to exit this function.
+
+     If any key except [ESC] or [BREAK] is struck, memory will be cleared then
+     a system coldstart will be performed.
+      SyMon responds:
+
+       S/O/S SyMon (c)1990 B.Phelps
+       Version mm.dd.yy
+       [CNTL-A] runs assembler
+
+       SyMon III
+
+       Monitor:
+
+       M-
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1.8 MEMORY COMMANDS (cont'd.)
+
+
+ [CNTL-L] = List (disassemble) memory. Disassemble 21 consecutive instructions
+            from a specified address.
+
+     Type [CNTL-L] or [CNTL-l]
+      SyMon responds:
+
+       M-List: $
+
+     Type-in the HEX address you want to begin listing, followed by [RETURN].
+      SyMon responds:
+
+       M-List: $E000
+       $E000  48            PHA
+       $E001  98            TYA
+       $E002  20  12  E0    JSR  $E012
+       $E005  85  CC        STA  $CC
+       $E007  68            PLA
+       $E008  20  12  E0    JSR  $E012
+       $E00B  0A            ASL  A
+       $E00C  0A            ASL  A
+       $E00D  0A            ASL  A
+       $E00E  0A            ASL  A
+       $E00F  05  CC        ORA  $CC
+       $E011  60            RTS
+       $E012  38            SEC
+       $E013  E9  30        SBC  #$30
+       $E015  C9  0A        CMP  #$0A
+       $E017  90  02        BCC  $E01B
+       $E019  E9  07        SBC  #$07
+       $E01B  60            RTS
+       $E01C  A9  00        LDA  #$00
+       $E01E  85  E5        STA  $E5
+       $E020  85  E6        STA  $E6
+
+     (In this example, the address entered is assumed to have been $E000)
+     Striking "N" or "n" (and most others) will list the next 22 consecutive
+     instructions. [SPACE] will list one instruction at a time. [RETURN] will
+     exit the list function.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2.0 REGISTER COMMANDS
+
+
+
+ SyMon uses certain zero-page memory locations as storage for "processor
+ register preset/result" values. These are useful for testing and debugging
+ purposes, and provide the means by which you can pass data/parameters to/from
+ your programs or subroutines when calling them from the monitor.
+ When you use the "G" or "g" (GOTO) command, SyMon first copies the contents of
+ these memory locations to the actual processor registers before beginning
+ execution at the address you specified. Conversly, whenever your program or
+ subroutine does a normal return (RTS) to the monitor, the current processor
+ registers are copied into these memory locations.
+ From the monitor, these "processor register preset/result" values can be 
+ examined or changed.
+ The commands are as follows:
+
+ "R" or "r" = Displays all processor preset/result values, including a
+              bit-by-bit representation of the processor status register
+              preset/result.
+
+ "A" or "a" = Examine/change ACCUMULATOR preset/result value.
+ "X" or "x" = Examine/change X register preset/result value.
+ "Y" or "y" = Examine/change Y register preset/result value.
+ "S" or "s" = Examine/change stack pointer preset/result value.
+ "P" or "p" = Examine/change processor status register preset/result value.
+
+ The above A,X,Y,S,P commands all use the same basic format for
+ examining/changing these preset/result values:
+
+     Type the letter "A" or "a"    
+      SyMon responds:
+
+       M-Areg:$bb $
+
+     In the example above, "bb" is the current value of the ACCUMULATOR
+     preset/result storage location. You may now change this value by 
+     typing-in a new HEX value, or leave it unchanged by striking [RETURN]
+     before any digits have been typed. [ESCAPE] key exits, as usual.
+
+ The memory locations used to store the preset/result values are as follows:
+
+ A --> $DA (system variable: ACCUM)
+ X --> $DB (system variable: XREG)
+ Y --> $DC (system variable: YREG)
+ S --> $DD (system variable: SREG)
+ P --> $DE (system variable: PREG)
+
+ NOTE: The stack pointer preset/result location ($DD) is initialized by SyMon
+       upon system reset, or upon encountering a BRK instruction, or whenever
+       the [BREAK] key has been struck. In all these cases, it is set to $7F.
+       This leaves $80 bytes for SyMon's stack and $80 bytes for the user
+       program/application stack as the default condition.
+
+
+
+
+
+
+
+
+
+
+
+
+
+3.0 PROGRAM CONTROL COMMANDS
+
+ G = GOTO. Begin executing program code at a specified address.
+
+     Type the letter "G" or "g"
+      SyMon responds:
+
+       M-G $
+
+     Type-in the HEX address at which you want to begin executing program code,
+     followed by [RETURN].
+     Before SyMon transfers program control over to the address you specified,
+     it pre-loads the 6502 processor registers with values stored in dedicated
+     memory locations. Refer to the REGISTER COMMANDS section of this guide
+     for details on these memory locations and the processor registers they
+     involve.
+
+     NOTE: User/application program code may, under normal circumstances,
+     return program control back to SyMon by terminating with a RTS
+     instruction.
+
+3.1
+ [CNTL-U] = User program GOTO. Begin executing program code at address $0400.
+     Similar to the "G" command except the starting address is assumed to be
+     $0400.
+
+3.2
+ [BREAK] = Interrupt the current task, return control to SyMon monitor. 
+     This will cause SyMon to abort whatever process is currently running then
+     return control to the monitor. Useful for recovering from endless loop
+     conditions or from user program "crash". [BREAK] is an ASCII NULL ($00)
+     received from the terminal. Some conditions may require that [BREAK]
+     be sent more than once, depending on the type of terminal being used and
+     the nature of the loop or "crash". [BREAK] will not work if IRQ has been
+     disabled or if the ACIA (terminal serial port) has been improperly
+     re-configured, thus ignoring ALL keystrokes.
+
+3.3
+ [CNTL-R] = Restart SyMon. This performs a BIOS reset or "coldstart".
+     This will re-initialize the serial port device (6551),
+     but no other hardware devices will be affected. This will also restore
+     SyMon's system variables to their default (power-up RESET) conditions.  
+
+     Type [CNTL-R]
+      SyMon responds:
+
+       S/O/S SyMon (c)1990 B.Phelps
+       Version mm.dd.yy
+       [ctrl-a] runs assembler.
+
+       SyMon III
+
+       monitor:
+
+       M-
+
+
+
+
+
+
+
+
+
+
+
+3.4 PROGRAM CONTROL COMMANDS (cont'd.)
+
+ ( = Record keystroke macro. Initializes the keystroke input buffer pointers to
+     the beginning (lowest address: $0200) of the buffer. Up to 255 keystrokes
+     may be made before the ")" command (play keystroke macro) is entered.
+     This is mostly useful for demonstration purposes, but could also be used
+     for test or debug loops. Refer to the ")" command description listed
+     below.
+
+3.5      
+ ) = Play keystroke macro. This will cause the monitor to re-process all
+     keystrokes made following the "(" command. Since the ")" command is also
+     stored in the keystroke input buffer, it will loop through the macro
+     repeatedly until a hardware reset is performed or a [BREAK] ($00) is
+     received from the terminal. Note: depending upon the terminal being used
+     and the commands contained within the macro, you may need to send [BREAK]
+     several times to exit the macro loop.
+     To set-up a single iteration macro (no looping), write a "BRK" instruction
+     ($00) to memory using the "C" (EXAMINE/CHANGE MEMORY) command then execute
+     it using the "G" (GOTO) command. Make this the last command sequence in
+     your macro. You may then "play" the macro as many times as desired by
+     entering the ")" command.
+     Note: Some monitor commands, if entered into a macro, will terminate
+     macro command execution and return to the monitor. This is because they
+     alter either the contents of the keystroke input buffer (where the macro
+     resides) or the buffer pointers. These commands are:
+
+      K = Locate bytes
+      L = Locate text
+      U = Upload
+      [BREAK] = Break
+      [CNTL-D] = Download
+      [CNTL-R] = Reset
+      [CNTL-W] = Wipe memory
+
+3.6
+ . = Set delay duration then perform delay. This is a do-nothing delay timer
+     intended mainly for use in keystroke macros as a means of pausing between
+     command functions. Refer to the "SET" subroutine description for
+     additional details (this command calls the "SET" subroutine).
+
+     Type "." (period)
+      SyMon responds:
+
+       M-.$
+
+     Enter the HEX duration value followed by [RETURN]. SyMon will perform the
+     delay then return with a fresh monitor prompt. ($00 = longest delay,
+     $01 = shortest delay)
+
+3.7
+ , = Perform delay of a duration previously specified using the "." command
+
+     Type "," (comma)
+      SyMon does not respond but will perform the delay then return with
+      a fresh monitor prompt (this command calls the "TIMER" subroutine).
+
+
+
+
+
+
+
+
+
+
+
+
+4.0 ASCII/HEX INPUT CONVERSION COMMANDS
+
+ I = Input ASCII. Request a keystroke from the terminal and write it to the
+     ACCUMULATOR preset/result storage location ($DA).
+
+     Type the letter "I" or "i"
+      SyMon does not respond. It will wait for your next keystroke, store it,
+      then issue a fresh monitor prompt. The only keystroke that will not be
+      stored is [BREAK] (ASCII NULL, byte=$00); [BREAK] will exit this input
+      function.
+4.1
+ O = Output ASCII. Send the byte in the ACCUMULATOR preset/result storage
+     location to the terminal.
+
+     Type the letter "O" or "o"
+      SyMon will send the stored byte to the terminal. If it is a printable
+      ASCII character, it will appear on your terminal below the monitor
+      prompt. Non-printable ASCII characters will perform thier normal
+      functions such as [RETURN], [LINEFEED], [BACKSPACE], Etc.
+4.2
+ B = Byte value output. Send two ASCII characters (HEX digits) to terminal
+     which represent the byte stored at the ACCUMULATOR preset/result storage
+     location.
+
+     Type the letter "B" or "b"
+      SyMon will display in HEX the value stored at the ACCUMULATOR
+      preset/result storage location. Note that the "A" command will
+      display the same byte and allow you to change it as well.    
+
+     The I, O and B commands all use the ACCUMULATOR preset/result storage
+     location ($DA). This is the same location that the "A" command uses.
+     (Refer to the REGISTER COMMANDS section of this manual for a explanation
+     of the "A" command.)
+
+4.3 Typical usage examples:
+
+      To find the HEX value of a keystroke (ASCII to HEX conversion):
+
+       Type the letter "I" or "i"
+       Type [the keystroke you want to convert]
+       Type the letter "B" or "b"
+        SyMon will display the previous keystroke value in HEX.
+
+      To find which ASCII character is represented by a byte value (HEX to
+      ASCII conversion):
+
+       Type "A" or "a"
+        SyMon responds:
+
+         M-Areg:$bb $
+
+       Type-in the HEX value you want to convert, followed by [RETURN]
+       Type the letter "O" or "o"
+        SyMon will display the ASCII character represented by the HEX value you
+        entered.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5.0 DECIMAL/HEX INPUT CONVERSION COMMANDS
+
+ H = HEX to DECIMAL conversion. Display DECIMAL equivalent of an entered
+     1-8 digit HEX value. 
+
+     Type the letter "H" or "h"
+      SyMon responds:
+
+       HEX: $
+ 
+     Type-in the 1-8 digit HEX value you want to convert, followed by [RETURN].
+     (Use [BACKSPACE] if you need to correct a typo.)  
+      SyMon responds:
+
+       HEX: $hhhhhhhh
+       DEC: dddddddddd
+
+     In the example above, "hhhhhhhh" is the HEX value you entered,
+     "dddddddddd" is the DECIMAL equivalent. Leading zeros need not be entered.
+     Leading zeros are suppressed in the displayed result.
+
+5.1
+ J = DECIMAL to HEX conversion. Display HEX equivalent of an entered
+     1-10 digit DECIMAL value. 
+
+     Type the letter "J" or "j"
+      SyMon responds:
+
+       DEC: $
+
+     Type-in the 1-10 digit DECIMAL value you want to convert, followed by
+     [RETURN]. (Use [BACKSPACE] if you need to correct a typo.)  
+      SyMon responds:
+
+       DEC: dddddddddd
+       HEX: $hhhhhhhh
+
+     In the example above, "dddddddddd" is the DECIMAL value you entered,
+     "hhhhhhhh" is the HEX equivalent. Leading zeros need not be entered.
+     Leading zeros are suppressed in the displayed result.
+     NOTE: If you enter a DECIMAL value greater than 4,294,967,295 
+     ($FFFFFFFF), the HEX result will be preceeded by 1 or 2 asterisks (*).
+     This is because the program's HEX accumulator "rolls over" to zero
+     when that value is exceeded. (for each (*) displayed, add $1,0000,0000
+     to the displayed result to get the correct HEX value)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6.0 SEARCH MEMORY COMMANDS
+
+
+
+ K = Search memory for a specified byte sequence (byte string). This will
+     search the memory address range $300-$FFFF.  
+
+     Type the letter "K" or "k"
+      SyMon responds:
+
+       Find bytes: $
+
+     Type-in the first byte of the sequence you want to locate, followed by
+     [RETURN].
+      SyMon responds:
+
+       Find bytes: $bb  $
+
+     In the example above, "bb" is the byte value you entered. You may now
+     type-in the next byte in the sequence followed by [RETURN], or begin
+     searching by striking [RETURN] before any HEX digits have been typed.
+     The byte string may be anywhere from 1 to 16 bytes in length, entered
+     one byte at a time. (SyMon will automatically begin searching if you
+     try to enter more than 16 bytes.)
+      SyMon responds:
+
+       Find bytes: $bb  $dd  $
+       Searching..not found
+
+       M-
+
+     In the example above, "bb" is the first byte value you entered, "dd" is
+     the second, and the specified byte sequence was not found.
+
+     If the sequence was found,
+      SyMon responds:
+
+       Find bytes: $bb  $dd  $
+       Searching..found at: $aaaa
+       N=Next?
+
+     In the example above, "aaaa" is the address at which the first byte of the
+     specified string was found. You may now continue to search memory for
+     another match to the specified string by typing the letter "N" or "n".
+     (Any other key will exit the search function.) You may continue this
+     process until the end of memory ($FFFF) is reached.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6.1 SEARCH MEMORY COMMANDS (cont'd.)
+
+
+
+ L = Search memory for a specified ASCII sequence (text string). This will
+     search the memory address range $300-$FFFF.  
+
+     Type the letter "L" or "l"
+      SyMon responds:
+
+       Find text:
+
+     Type-in the ASCII sequence (text string) you want to locate, followed by
+     [RETURN]. The text string may be anywhere from 1 to 16 characters in
+     length. (SyMon will automatically begin searching if you try to enter more
+     than 16 characters.) THIS SEARCH METHOD IS CASE SENSITIVE.
+      SyMon responds:
+
+       Find text: abcd
+       Searching..not found
+
+       M-
+
+     In the example above, "abcd" is the text string you entered, and the
+     specified text string was not found.    
+
+     If the sequence was found,
+      SyMon responds:
+
+       Find text: abcd
+       Searching..found at: $aaaa
+       N=Next
+
+     In the example above, "aaaa" is the address at which the first character
+     of the specified string was found. You may now continue to search memory
+     for another match to the specified string by typing the letter "N" or "n".
+     (Any other key will exit the search function.) You may continue this
+     process until the end of memory ($FFFF) is reached.
+     NOTE: you may include in your search string all ASCII characters including
+     control codes ([BACKSPACE], [LINEFEED], Etc.), except [BREAK], [ESCAPE]
+     and [RETURN].
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7.0 PROGRAM STORAGE/RETRIEVAL/TRANSFER COMMANDS
+
+
+
+     These utilities facilitate "copy and paste" methods of program
+     storage/retrieval, as well as allowing programs/data to be transferred
+     directly between two (or more) systems running S/O/S SyMon III. 
+
+     To "save" or "send" a program, use the UPLOAD command.
+     To "load" or "receive" a program, use the DOWNLOAD command.
+
+ U = Upload program to terminal or send program to another S/O/S system.
+
+     Type the letter "U" or "u"
+      SyMon responds:
+
+       Upload address: $
+
+     Type-in the address of the beginning of the program or data you want to
+     upload/send, followed by [RETURN]. The address may be anywhere within the
+     range $0 to $FFFF.
+      SyMon responds:
+
+       Upload length: $
+
+     Type-in the length, in bytes, of the program or data you want to
+     upload/send, followed by [RETURN]. The length may be anywhere within the
+     range $1 to $FFFF. There will be a 10-second delay following entry of the
+     length parameter. This is to allow time to swap cables, adjust data
+     transfer switches, etc. This is necessary in a system-to-system transfer
+     because command entry and program/data transfers use the same serial port.  
+      SyMon responds:
+
+       10 Seconds
+       $aaaa D8 A2 FF 9A A9 1F 8D 03 80 A9 09 8D 02 80 A9 FF
+       $E010 85 25 85 26 A9 00 85 28 85 32 85 33 85 34 85 36
+       $E020 85 76 85 75 A9 7F 85 35 A9 FF 85 29 EA EA EA A2 *
+
+       M-
+
+     In the example above, "aaaa" is the address you entered. (In this example,
+     the address entered is assumed to have been $E000 and the length $30.)
+     Notice the asterisk (*) at the end, following "A2" in the DUMP LIST. The
+     asterisk is sent to indicate "End Of File". It is used by the
+     download/receive function to determine when the program/data transfer is
+     complete.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7.1 PROGRAM STORAGE/RETRIEVAL/TRANSFER COMMANDS (cont'd.)
+
+
+ [CNTL-D] = Download program from terminal or receive program from another
+     S/O/S system.
+
+     Type [CNTL-D]
+      SyMon responds:
+
+       Download:
+
+     At this point, any received bytes will be regarded as program addresses or
+     program data. A dollar sign ($) signifies that the next 4 characters are
+     valid ASCII hexadecimal digits (high byte first). These will be
+     interpreted as a 4-digit (16 bit) data destination address
+     (DUMP LIST line address). After the 4 address digits have been received,
+     SyMon expects valid ASCII hexadecimal digits representing bytes of program
+     code/data. The only ASCII printable characters allowed are the following:
+
+     0123456789ABCDEF$*  (NOTE: UPPER-CASE alphabetical characters ONLY)
+
+     The only ASCII control characters allowed are the following:
+
+     [SPACE($20)] [RETURN($0D)] [LINEFEED($0A)] [BREAK($00)]
+     [SPACE] [RETURN] [LINEFEED] are ignored. [BREAK] returns to SyMon.
+
+     An asterisk (*) signifies the end of the file. If one is encountered, the
+     program warmstarts SyMon monitor (exits). Same result if a [BREAK($00)] is
+     encountered.
+
+     Listed below are some valid DUMP LIST examples:
+     (NOTE: leading zeros MUST ALWAYS be included.)
+
+      $E000 D8 A2 FF 9A A9 1F 8D 03 80 A9 09 8D 02 80 A9 FF
+      $E010 85 25 85 26 A9 00 85 28 85 32 85 33 85 34 85 36
+      $E020 85 76 85 75 A9 7F 85 35 A9 FF 85 29 EA EA EA A2 *
+
+      $E010 85 25 85 26 A9 00 85 28 85 32 85 33 85 34 85 36
+      $E000 D8 A2 FF 9A A9 1F 8D 03 80 A9 09 8D 02 80 A9 FF
+      $E020 85 76 85 75 A9 7F 85 35 A9 FF 85 29 EA EA EA A2 *
+
+      $E000D8A2FF9AA91F8D0380A9098D0280A9FF
+      $E01085258526A90085288532853385348536
+      $E02085768575A97F8535A9FF8529EAEAEAA2*
+
+      $E000D8A2FF9AA91F8D0380A9098D0280A9FF85258526A90085288532853385348536
+      85768575A97F8535A9FF8529EAEAEAA2*
+
+      $0300
+      08
+      FF03
+      E0 89 770D 01
+      *
+
+     DUMP LIST lines may be any length. DUMP LIST line addresses may be in any
+     order.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8.0 TEXT EDIT COMMAND
+
+
+
+ Z = Write entered text (keystrokes) to memory. This allows you to write
+     keystrokes or "paste" text directly to memory.
+
+     Type the letter "Z" or "z"
+      SyMon responds:
+
+       M-Z $
+
+     Type-in the address of the beginning of the memory block to which you want
+     to write or paste text, followed by [RETURN]. The address may be anywhere
+     within the range $0 to $FFFF.
+      SyMon responds by sending a [RETURN], [LINEFEED].
+
+     You may now type-in whatever text you want to write to memory, or you may
+     "paste to host" (If you are using HYPERTERMINAL or equivalent) an ASCII
+     text copy.
+
+     ASCII control codes will be stored as typed/received except for the
+     following:
+
+      [BACKSPACE] will delete the last keystroke(s) made (unless the beginning
+       of the specified memory block is reached). Use this to fix "typos".
+
+      [ESCAPE] will exit the editor function. Upon exit, SyMon will display
+       the HEX address of the byte following the last keystroke made/stored.
+       This is useful for 'terminating' a text string; a $00 stored (by you)
+       at the displayed address will indicate "End of String" for SyMon's
+       TEXT VIEWER command and PROMPT, PROMPT2 subroutines. Additionally, the
+       displayed address may be used as the 'beginning address' if you want to
+       append keystrokes or "pasted" text at a later time.
+
+      [BREAK] will "warmstart" SyMon monitor (exit). 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8.1 TEXT VIEW COMMAND
+
+
+
+ V = View text from memory. This allows you to view ASCII text representations
+     of bytes stored in memory, beginning at a specified memory address.    
+
+     Type the letter "V" or "v"
+      SyMon responds:
+
+       M-V $
+
+     Type-in the beginning address of the memory block containing the text
+     string you want to view, followed by [RETURN]. The address may be anywhere
+     within the range $0000 to $FFFF.
+      SyMon responds:
+
+       M-V $aaaa
+       ttttttttttttttttttttt
+
+     In the example above, "aaaa" is the address you entered and "t" is
+     whatever ASCII characters were found at that address. SyMon reads from the
+     address you specified then sends the character to the terminal. Next, the
+     address is incremented then read and that character is sent. This process
+     will continue until an ASCII [NULL] ($00) is encountered, which will
+     terminate the view text command then return to the monitor. This function
+     is useful for "proof-reading" the appearance and accuracy of text strings
+     built using the text editor function (Z command).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+9.0 DISPLAY SYSTEM SUBROUTINE AND I/O ADDRESSES 
+
+ Q = Display a list of useful subroutines and the default I/O device addresses. 
+
+     Type the letter "Q" or "q"
+      SyMon responds:
+
+       M-Q
+       $E138 CHIN    $E15A COUT
+       $E157 COUT2   $E18B CROUT
+       $E188 CR2     $E5A0 SPC2
+       $E59D SPC4    $E3F0 PRASC
+       $E283 DOLLAR  $E3FD PRBYTE
+       $E40E PRINDX  $E41B PROMPT
+       $E10D BEEP    $E198 DELAY1
+       $E19D DELAY2  $E578 SET
+       $E57A TIMER   $E44D RDLINE
+       $E115 BN2ASC  $E000 ASC2BN
+       $E1B9 HEXIN   $E4C6 SAVREGS
+       $E4B0 RESREGS $xxxx LCDINIT
+       $xxxx LCDOUT  $E357 INCINDEX
+       $E5D5 DECIN   $E97A PROMPT2
+       $E1B3 HEXIN2  $E1B7 HEXIN4
+       $EB55 NMON    $EAF4 COLDSTRT
+       6551:$8000 LCD:$9000 8255:$A000
+
+       M-
+
+ 9.1 SYSTEM SUBROUTINE DESCRIPTIONS:
+
+ $E138 CHIN    {CHARACTER INPUT} Waits for a keystroke from terminal. Returns
+               with keystroke byte in ACCUMULATOR.
+
+ $E15A COUT    {CHARACTER OUTPUT} Sends byte in ACCUMULATOR to terminal.
+
+ $E157 COUT2   {CHARACTER OUTPUT TWICE} Calls COUT two times.
+
+ $E18B CROUT   {CARRIAGE RETURN OUTPUT} Sends ASCII [LINEFEED], [RETURN]
+               to terminal.
+
+ $E188 CR2     {CARRIAGE RETURN OUTPUT TWICE} Calls CROUT two times.
+
+ $E5A0 SPC2    {SPACE OUTPUT TWICE} Sends two ASCII [SPACE] to terminal.
+
+ $E59D SPC4    {SPACE OUTPUT FOUR TIMES} Calls SPC2 two times.
+
+ $E3F0 PRASC   {PRINT ASCII} Sends byte in ACCUMULATOR to terminal only if
+               it is a printable ASCII character (bit-7 is ignored). If the
+               byte is not a printable ASCII character, sends ASCII "." to
+               terminal.
+ 
+ $E183 DOLLAR  {DOLLAR OUTPUT} Sends ASCII "$" to terminal.
+ 
+ $E3FD PRBYTE  {PRINT BYTE} Sends to terminal two ASCII hexadecimal digits
+               representing the byte in the ACCUMULATOR.
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 9.1.1 SYSTEM SUBROUTINE DESCRIPTIONS (cont'd.):
+
+ $E40E PRINDX  {PRINT INDEX} Sends to terminal four hexadecimal digits
+               representing the contents of the 16-bit system variable INDEX.
+               INDEX ($C8=low byte), INDEXH ($C9=high byte).
+
+ $E41B PROMPT  {PRINT A STRING} Sends specified string to terminal. Address
+               of 256-byte string(s) array is pointed to by 16-bit system
+               variable PROLO ($C2=low byte), PROHI ($C3=high byte).
+               ACCUMULATOR contains string # to print. All strings in array
+               MUST be preceeded by an ASCII [NULL] ($00). Last string in array
+               MUST be followed by an ASCII [NULL] ($00).
+
+ $E97A PROMPT2 {PRINT A LONG STRING} Sends a long string to terminal. Address
+               of long string is pointed to by 16-bit system variable
+               INDEX ($C8=low byte), INDEXH ($C9=high byte). Long strings may
+               be any length and MUST be followed by an ASCII [NULL] ($00).
+
+ $E10D BEEP    {BELL OUTPUT} Sends ASCII [BELL] to terminal.
+
+ $E198 DELAY1  {DELAY SHORT} Performs a do-nothing loop (n) times where
+               (n)= value contained in 8-bit system variable DELLO ($C0).
+               (value=$01= shortest delay, $00=longest delay.)
+
+ $E19D DELAY2  {DELAY MEDIUM} Calls DELAY1 (n) times where (n)= value contained
+               in 8-bit system variable DELHI ($C1).
+               (value=$01=shortest delay, $00=longest delay.)
+
+ $E578 SET     {SET DELAY LONG} Copies byte in X-REGISTER to 8-bit system
+               variable SETIM ($D8) then call DELAY2 (n) times where
+               (n)= value contained in SETIM ($D8).
+               (value=$01= shortest delay, $00= longest delay.)
+
+ $E57A TIMER   {DELAY LONG} Call DELAY2 (n) times where (n) = value contained
+               in 8-bit system variable SETIM ($D8).
+               (value=$01= shortest delay, $00= longest delay.)
+
+ $E44D RDLINE  {READ A LINE} Sets-up an input buffer of length (n) beginning at
+               address (a, a+1) then requests a string from terminal.
+               (n) (buffer length) = value in X-REGISTER,
+               (a) (buffer address low byte) = value in Y-REGISTER,
+               (a+1) (buffer address high byte) = value in ACCUMULATOR.
+               NOTE: LOWER-CASE ALPHA. ARE CONVERTED TO UPPER-CASE.
+               System variable LOKOUT ($D9):
+               IF = $00, will allow all keystrokes.
+               IF = $80, will allow only valid HEXADECIMAL digits
+               IF = $FF, will allow only valid DECIMAL digits. 
+               [BACKSPACE] may be used to delete/correct typos.
+
+ $E115 BN2ASC  {BYTE TO ASCII} Converts byte in ACCUMULATOR to two ASCII
+               hexadecimal digits. Returns with low digit in Y-REGISTER, high
+               digit in ACCUMULATOR.
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+ 9.1.2 SYSTEM SUBROUTINE DESCRIPTIONS (cont'd.):
+
+ $E000 ASC2BN  {ASCII TO BYTE} Converts two ASCII hexadecimal digits into a
+               byte. Call with low digit in Y-REGISTER, high digit in
+               ACCUMULATOR. Returns with byte value in ACCUMULATOR.
+               All alphabetical hex digits (A thru F) MUST be upper case ASCII.  
+
+ $E1B9 HEXIN   {HEXADECIMAL INPUT} Requests a 1-to-4 digit HEX value from
+               terminal. Call with ACCUMULATOR = maximum # of digit entries 
+               allowed (1-to-4 only). If 3-to-4 digits allowed, returns with
+               result in 16-bit system variable INDEX ($C8 = low byte),
+               INDEXH ($C9 = high byte), X-REGISTER = # of digits entered.
+               If 1-to-2 digits allowed, returns with result in ACCUMULATOR,
+               INDEX/INDEXH unchanged, X-REGISTER = # of digits entered.
+
+ $E1B3 HEXIN2  {HEXADECIMAL INPUT 2} Request a 1-to-2 digit hexadecimal value
+               from terminal. Result in ACCUMULATOR (see HEXIN)
+
+ $E1B7 HEXIN4  {HEXADECIMAL INPUT 4} Request a 1-to-4 digit hexadecimal value
+               from terminal. Result in INDEX, INDEXH (see HEXIN)
+
+ $E4C6 SAVREGS {SAVE REGISTERS} Push ACCUMULATOR, X,Y REGISTERS onto STACK.
+
+ $E4B0 RESREGS {RESTORE REGISTERS} Pull ACCUMULATOR, X,Y REGISTERS  from STACK.
+ 
+ $xxxx LCDINIT {LCD INIT} Initialize the LCD module
+
+ $xxxx LCDOUT  {LCD COUT} Sends byte in ACCUMULATOR to LCD module display
+               memory
+
+ $E357 INCINDEX {INCREMENT INDEX} Increment 16-bit system variable INDEX
+                (INDEX = $C8), (INDEXH = $C9)
+
+ $E5D5 DECIN {DECIMAL INPUT} request 1 - 10 DECIMAL digit input from terminal
+             ([ESC] returns to monitor, [BACKSPACE] erases last keystroke) 
+             Convert input to BCD and HEX then store both results as follows: 
+             Converted 10 digit (5 byte) BCD value will be stored in variables
+             DEC0AND1 through DEC8AND9:
+               DEC0AND1 ($E5) Two most significant BCD digits
+               DEC2AND3 ($E6)
+               DEC4AND5 ($E7)
+               DEC6AND7 ($E8)
+               DEC8AND9 ($E9) Two least significant BCD digits
+             Converted 8 digit (4 byte) HEX value will be stored in variables
+             HEX0AND1 through HEX6AND7:
+               HEX0AND1 ($E1) Two most significant HEX digits
+               HEX2AND3 ($E2)
+               HEX4AND5 ($E3)
+               HEX6AND7 ($E4) Two least significant HEX digits
+        NOTE: If a DECIMAL value greater than 4,294,967,295 ($FFFFFFFF) is
+        entered, 1 or 2 asterisks (*) will be sent to the terminal following
+        the inputted digits. This is to indicate that an overflow in the HEX
+        accumulator has occured. (the HEX accumulator "rolls over" to zero when
+        that value is exceeded) An overflow condition does NOT affect the
+        stored BCD value.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+10.0 SyMon III vectors:
+
+ $EAF4 COLDSTRT {RESET VECTOR} Restart S/O/S SyMon III
+
+ $EB55 NMON    {NEW MONITOR} Warmstart SyMon III monitor without parameter
+               init. except system variables PROLO,PROHI which will point to
+               the monitor's prompt strings array  
+
+ $0300 NMI     {NMI VECTOR} Upon edge sensing NMI input = 0, program execution
+               will commence at $0300. SyMon does not use this vector; User
+               NMI handler program may be located here 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11.0 S/O/S SUB-ASSEMBLER
+
+
+
+ [CNTL-A] = Launch S/O/S sub-assembler utility.
+
+     Type [CNTL-A]
+      SyMon responds:
+
+       Assembler:
+
+       Origin: $
+
+     Type-in the memory address at which you want to begin
+     assembling/disassembling program code, followed by [RETURN].
+     The address may be anywhere within the range $0 to $FFFF.
+      SyMon responds:
+
+       Origin: $aaaa
+       $aaaa-
+
+     In the example above, "aaaa" is the address you entered. You may now
+     type-in a valid 6502 mnemonic instruction OR issue a DIRECTIVE. Directives
+     are assembler commands. Some directives are monitor commands made
+     accessable from the assembler.
+
+11.1 ASSEMBLER DIRECTIVES
+
+ [ESC] = QUIT: Quit S/O/S Sub-assembler, return to SyMon III monitor.
+
+ [SPACE] = INSTRUCTION: Disassemble one instruction at the current address,
+           then advance to the next instruction address. Any invalid opcodes
+           encountered will be displayed as "***".
+
+ "." then "A" or "a" = AREG: Examine/change ACCUMULATOR preset/result
+                       (Refer to monitor "A" command)
+
+ "." then "B" or "b" = BYTE: Enter byte values directly into memory.
+                       (Refer to monitor "C" command)
+ 
+ "." then "G" or "g" = GOTO: Execute code beginning at last the specified ORIGIN
+                       address. (Refer to monitor "G" command)
+ 
+ "." then "I" or "i" = INPUT: Display HEX equivalent of the next key struck 
+
+ "." then "L" or "l" = LIST: Disassemble 21 consecutive instructions from a 
+                       specified address OR, with a null entry, the address
+                       last specified as the ORIGIN . Striking "N" or "n" (and
+                       most others) will LIST the next 21 consecutive
+                       instructions. [SPACEBAR] will LIST one instruction at a
+                       time. [RETURN] will exit the LIST function.
+
+ "." then "O" or "o" = ORIGIN: Select the memory address at which you want to
+                       begin assembling/disassembling program code.
+
+ "." then "P" or "p" = PROCESSOR STATUS: Examine/change PROCESSOR STATUS
+                       preset/result. (Refer to monitor "P" command)
+ 
+ "." then "Q" or "q" = QUERY: Show list of useful system subroutine addresses.
+                       (Refer to monitor "Q" command)
+
+ "." then "R" or "r" = REGISTERS: Display ALL preset/result registers.
+                       (Refer to monitor "R" command)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11.1.1 ASSEMBLER DIRECTIVES (cont'd.)
+
+ "." then "S" or "s" = SREG: Examine/change STACK POINTER preset/result.
+                       (Refer to monitor "S" command)
+
+ "." then "T" or "t" = TEXT: Store keystrokes directly into memory. This
+                       includes ALL keystrokes except [ESC] and [BREAK].
+                       [ESC] exits this function, [BREAK] returns control to the
+                       monitor. 
+
+ "." then "U" or "u" = UP: Go back to the address of the last instruction that
+                       was assembled/disassembled. This is useful for
+                       correcting any errors made while typing-in an
+                       instruction; it allows you to "re-do" the last
+                       instruction you typed-in. In addition, it allows you to
+                       change the last instruction that was disassembled. This
+                       directive may be used only once per assembled or
+                       disassembled instruction. If you need to 'back-up' by
+                       more than one instruction, use the ORIGIN directive.
+
+ "." then "W" or "w" = WORD: Enter (16-bit) values directly into memory.
+                       Type-in  HI byte first, then LO byte, followed by
+                       [RETURN]. The entered word will be stored LO byte first
+                       per 6502 convention. If only one or two digits are
+                       entered, the HI byte is assumed to be = $00. A null
+                       entry will exit direct WORD mode.
+
+ "." then "X" or "x" = XREG: Examine/change X REGISTER preset/result.
+                       (Refer to monitor "X" command)
+ 
+ "." then "Y" or "y" = YREG: Examine/change Y REGISTER preset/result.
+                       (Refer to monitor "Y" command) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11.2.0 Assembler mnemonic instruction entry method
+
+    Sub-Assembler encodes each 6502 instruction as you type it in (unlike
+    typical mnemonic assemblers which usually assemble code from a previously
+    edited text file). Except for the 'DIRECTIVES' listed previously, all
+    keystrokes are processed as you type them, and and are parsed according to
+    which part of the instruction is being encoded (opcode or operand).
+    This method has several implications:
+
+    1.) There is no "label" support. All program variables, constants, address
+        references, etc. must be entered as numeric hex values.
+
+    2.) All operands must be entered in hexadecimal notation. Decimal and
+        binary notation are not supported.   
+
+    3.) There is no provision for textual reminders ("comments").
+
+    4.) While it is possible to "copy" disassembled code listings then "paste"
+        them into a text document, it is not practical to "paste" listings
+        directly to the assembler. This is because code listings do not
+        contain all of the keystrokes required to complete the entry of
+        mnemonic instructions.
+
+    To enter an instruction, begin by typing the 6502/65C02 mnemonic you want
+    to use, such as LDA, NOP, BEQ, etc. After the third character has been
+    typed, the assembler determines if the three characters represent a valid
+    6502/65C02 mnemonic. If they do not, the cursor will be moved back to the
+    first character, allowing you to re-type the mnemonic. If they are valid,
+    one of the following will occur:
+
+    1.) All single byte "IMPLIED" address mode instruction mnemonics (BRK, RTS,
+        CLC, etc.) will be immediatly encoded, then the assembler will advance
+        to the next consecutive address and display that address.
+
+    2.) All other address mode instruction mnemonics (2 or 3 byte instructions)
+        will move the cursor one or more spaces to the right. At this point,
+        the assembler expects a valid operand to be entered.
+
+    What constitutes a valid operand will, of course, depend upon which
+    mnemonic was entered. For the most part, operands are typed-in just as they
+    would appear in a typical 6502/65C02 program listing. One exception to
+    this is when entering the numeric hex value part of the operand, in which
+    case a [RETURN] keystroke is required to complete the hex value editing
+    function. For example:
+
+      To enter the instruction:  JSR $3500
+      you would type:            JSR3500[RETURN]
+
+    In the example above, the "$" need not be typed because the JSR instruction
+    has only one address mode (the assembler will display the "$" for you as
+    soon as the JSR mnemonic has been entered). Once [RETURN] is struck, the
+    assembler will encode the instruction then advance to the address following
+    it and display that address. 
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+11.2.1 Assembler mnemonic instruction entry method (cont'd.)
+
+    For multiple address mode instructions, the address mode is specified as
+    the operand is being typed-in.
+    The following are valid address mode selectors:  # $ a x y , ( ) [RETURN]
+    These may be required before and in some cases after the numeric hex
+    part of the operand, depending upon the instruction.
+    If a "$" is displayed, it indicates that the assembler expects a numeric
+    hex value; if a "?" is displayed, it expects a valid address mode selector.
+
+    Address mode selection method examples:
+
+      To enter the instruction:  LDA #$FF
+      you would type:            LDA#FF[RETURN]
+
+    In the example above, the "#" selects "IMMEDIATE" address mode (the
+    assembler automatically displays a "$" following the "#"). Since there
+    are no variations of the "IMMEDIATE" address mode, the assembler requests
+    no additional address mode selectors after [RETURN] is struck. 
+
+      To enter the instruction:  LDA $FF
+      you would type:            LDA$FF[RETURN][RETURN]
+
+    In the example above, the "$" selects "ABSOLUTE" address mode. Because
+    less then three hex digits were entered, "ZERO PAGE" address mode is
+    selected. The second [RETURN] indicates that this is the address mode
+    you intended to use.
+
+      To enter the instruction:  LDA $FF,X
+      you would type:            LDA$FF[RETURN],
+
+    In the example above, the "$" selects "ABSOLUTE" address mode. Because
+    less then three hex digits were entered, "ZERO PAGE" address mode is
+    selected. The "," selects "ZERO PAGE ABSOLUTE INDEXED by X".
+
+      To enter the instruction:  LDA ($FF,X)
+      you would type:            LDA(FF[RETURN],
+
+    In the example above, the "(" selects "INDIRECT" address mode. Because
+    less then three hex digits were entered, "INDEXED" address mode is
+    selected. The "," selects "ZERO PAGE INDIRECT PRE-INDEXED by X".
+
+      To enter the instruction:  LDA ($FF),Y
+      you would type:            LDA(FF[RETURN])
+
+    In the example above, the "(" selects "INDIRECT" address mode. Because
+    less then three hex digits were entered, "INDEXED" address mode is
+    selected. The ")" selects "ZERO PAGE INDIRECT POST-INDEXED by Y".
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11.2.2 Address mode selection method examples (cont'd.):
+
+      To enter the instruction:  LDA ($FF)
+      you would type:            LDA(0FF[RETURN]
+      or you could type:         LDA(00FF[RETURN]
+
+    In the example above, the "(" selects "INDIRECT" address mode. Because
+    more then two hex digits were entered, "ZERO PAGE INDIRECT" address mode
+    is selected. Although this is a two-byte instruction (8-bit ZERO PAGE
+    address), the address part of the operand is typed-in as a 12 or 16 bit
+    value. The high byte may be any hex value you choose; the assembler will
+    encode the instruction using only the low byte of the address you
+    type-in (the high byte will be discarded). "ZERO PAGE INDIRECT" address
+    mode is available only when using the 65c02 (CMOS) MPU component versions.
+
+
+      To enter the instruction:  LDA $0FFF
+      you would type:            LDA$FFF[RETURN][RETURN]
+
+    In the example above, the "$" selects "ABSOLUTE" address mode. Because
+    more then two hex digits were entered, 16-bit address mode is selected.
+    The second [RETURN] indicates that this is the address mode you intended
+    to use. (Note that the leading zero in the address portion of the
+    instruction need not be typed.)
+
+      To enter the instruction:  LDA $0FFF,Y
+      you would type:            LDA$FFF[RETURN]Y
+
+    In the example above, the "$" selects "ABSOLUTE" address mode. Because
+    more then two hex digits were entered, 16-bit address mode is selected.
+    The "Y" selects "ABSOLUTE INDEXED by Y".
+
+      To enter the instruction:  JMP $0FFF
+      you would type:            JMP$FFF[RETURN]
+
+    In the example above, the "$" selects "ABSOLUTE" 16-bit address mode.
+    (Note that leading zeros in the address portion if the instruction need
+    not be typed.)
+
+      To enter the instruction:  JMP ($0FFF)
+      you would type:            JMP(FFF[RETURN])
+
+    In the example above, the "(" selects "INDIRECT" 16-bit address mode.
+    The ")" selects "NON-INDEXED" address mode.
+    (Note that leading zeros in the address portion if the instruction need
+    not be typed.)
+
+      To enter the instruction:  JMP ($0FFF,X)
+      you would type:            JMP(FFF[RETURN], <---(notice the comma)
+
+    In the example above, the "(" selects "INDIRECT" 16-bit address mode.
+    The "," selects "PRE-INDEXED BY X" address mode.
+    (Note that leading zeros in the address portion if the instruction need
+    not be typed.)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11.2.3 Address mode selection method examples (cont'd.):
+
+      To enter the instruction:  BBR7 $AA $BBBB
+      you would type:            BBR7AA[RETURN]BBBB[RETURN]
+
+    In the example above, the "7" selects bit 7 (the m/s bit) to be tested
+    (bit selectors must be within the range 0 to 7). 
+    The "AA[RETURN]" selects the ZERO PAGE address to be tested.
+    The "BBBB[RETURN]" selects the branch destination ADDRESS
+    The BBR and BBS instructions are available only when using the 65c02 (CMOS)
+    MPU component versions.
+
+
+      To enter the instruction:  RMB7 $AA
+      you would type:            RMB7AA[RETURN]
+
+    In the example above, the "7" selects bit 7 (the m/s bit) to be set
+    (bit selectors must be within the range 0 to 7). 
+    The "AA[RETURN]" selects the ZERO PAGE address to be modified.
+    The RMB and SMB instructions are available only when using the 65c02 (CMOS)
+    MPU component versions.
+
