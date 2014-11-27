@@ -13,6 +13,9 @@
 extern "C" {
 #endif
 
+//! Size of EEPROM page (TODO: Can be up to 256, the larger the better)
+#define EEPROM_PAGE_SIZE 32
+
 /** Initialise the UART interface
  *
  * Configures the UART for 57600 baud, 8N1.
@@ -32,7 +35,7 @@ void uartWrite(uint8_t ch);
  *
  * Sends the contents of a NUL terminated string over the UART interface.
  */
-void uartWriteString(const uint8_t *cszString);
+void uartWriteString(const char *cszString);
 
 /** Read a single character from the UART
  *
@@ -65,6 +68,34 @@ void spiInit();
  * @return the data received in the transfer
  */
 uint8_t spiTransfer(uint8_t data);
+
+/** Initialise the external hardware
+ *
+ * This function needs to be called after the SPI bus has been initialised and
+ * the pin switch matrix has been set up. It will initialise the external SPI
+ * components.
+ */
+void hwInit();
+
+/** Read a page of data from the EEPROM
+ *
+ * Fill a buffer with data from the selected page. The buffer must be large
+ * enough to hold the page (@see EEPROM_PAGE_SIZE).
+ *
+ * @param address the page address to read
+ * @param pData pointer to the buffer to hold the data.
+ */
+void eepromReadPage(uint16_t address, uint8_t *pData);
+
+/** Write a page of data to the EEPROM
+ *
+ * Write a buffer of data to the selected page. The buffer must be large
+ * enough to hold the page (@see EEPROM_PAGE_SIZE).
+ *
+ * @param address the page address to write
+ * @param pData pointer to the buffer holding the data.
+ */
+void eepromWritePage(uint16_t address, uint8_t *pData);
 
 #ifdef __cplusplus
 }

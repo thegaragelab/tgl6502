@@ -112,19 +112,6 @@ uint8_t cpuReadByte(uint16_t address);
 */
 void cpuWriteByte(uint16_t address, uint8_t value);
 
-/** Read a byte from the IO region
- *
- * @param address the offset into the IO area to read
- */
-uint8_t cpuReadIO(uint16_t address);
-
-/** Write a byte to the IO region
- *
- * @param address the offset into the IO area to write
- * @param value the value to write
- */
-void cpuWriteIO(uint16_t address, uint8_t byte);
-
 //---------------------------------------------------------------------------
 // Functions implemented by the emulator.
 //---------------------------------------------------------------------------

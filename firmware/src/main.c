@@ -14,6 +14,12 @@
 #include "hardware.h"
 #include "LPC8xx.h"
 
+//--- Version and identification information
+#define BANNER "TGL-6502"
+#define HW_VERSION "RevA"
+#define SW_VERSION "0.1"
+
+//-- Guff for Code Red
 #if defined(__CODE_RED)
   #include <cr_section_macros.h>
   #include <NXP/crp.h>
@@ -87,8 +93,11 @@ int main(void) {
   // Initialise the hardware
   uartInit();
   spiInit();
-  // Configure the switch matrix
+  // Configure the switch matrix and the external hardware
   configurePins();
+  hwInit();
+  // Show the banner
+  uartWriteString(BANNER " " HW_VERSION "/" SW_VERSION "\n");
   // Let the EEPROM loader start
   eepromMode();
   // Go into main emulation loop

@@ -258,7 +258,7 @@ static void putvalue(uint16_t saveval) {
  * I had to move everything into here.
  */
 void cpuStep() {
-  uint16_t eahelp, eahelp2, oldpc, reladdr, value, result;
+  uint16_t eahelp, eahelp2, reladdr, value, result;
   opcode = cpuReadByte(g_cpuState.m_pc++);
   uint8_t id = g_MODE[opcode];
   // Apply the addressing mode
@@ -350,22 +350,16 @@ void cpuStep() {
       putvalue(result);
       break;
     case OPCODE_BCC:
-      if ((g_cpuState.m_status & FLAG_CARRY) == 0) {
-        oldpc =g_cpuState.m_pc;
+      if ((g_cpuState.m_status & FLAG_CARRY) == 0)
         g_cpuState.m_pc += reladdr;
-        }
       break;
     case OPCODE_BCS:
-      if ((g_cpuState.m_status & FLAG_CARRY) == FLAG_CARRY) {
-        oldpc =g_cpuState.m_pc;
+      if ((g_cpuState.m_status & FLAG_CARRY) == FLAG_CARRY)
         g_cpuState.m_pc += reladdr;
-        }
       break;
     case OPCODE_BEQ:
-      if ((g_cpuState.m_status & FLAG_ZERO) == FLAG_ZERO) {
-        oldpc =g_cpuState.m_pc;
+      if ((g_cpuState.m_status & FLAG_ZERO) == FLAG_ZERO)
         g_cpuState.m_pc += reladdr;
-        }
       break;
     case OPCODE_BIT:
       value = getvalue();
@@ -374,22 +368,16 @@ void cpuStep() {
       g_cpuState.m_status = (g_cpuState.m_status & 0x3F) | (uint8_t)(value & 0xC0);
       break;
     case OPCODE_BMI:
-      if ((g_cpuState.m_status & FLAG_SIGN) == FLAG_SIGN) {
-        oldpc =g_cpuState.m_pc;
+      if ((g_cpuState.m_status & FLAG_SIGN) == FLAG_SIGN)
         g_cpuState.m_pc += reladdr;
-        }
       break;
     case OPCODE_BNE:
-      if ((g_cpuState.m_status & FLAG_ZERO) == 0) {
-        oldpc =g_cpuState.m_pc;
+      if ((g_cpuState.m_status & FLAG_ZERO) == 0)
         g_cpuState.m_pc += reladdr;
-        }
       break;
     case OPCODE_BPL:
-      if ((g_cpuState.m_status & FLAG_SIGN) == 0) {
-        oldpc =g_cpuState.m_pc;
+      if ((g_cpuState.m_status & FLAG_SIGN) == 0)
         g_cpuState.m_pc += reladdr;
-        }
       break;
     case OPCODE_BRK:
       g_cpuState.m_pc++;
@@ -399,16 +387,12 @@ void cpuStep() {
       g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
       break;
     case OPCODE_BVC:
-      if ((g_cpuState.m_status & FLAG_OVERFLOW) == 0) {
-        oldpc =g_cpuState.m_pc;
+      if ((g_cpuState.m_status & FLAG_OVERFLOW) == 0)
         g_cpuState.m_pc += reladdr;
-        }
       break;
     case OPCODE_BVS:
-      if ((g_cpuState.m_status & FLAG_OVERFLOW) == FLAG_OVERFLOW) {
-        oldpc =g_cpuState.m_pc;
+      if ((g_cpuState.m_status & FLAG_OVERFLOW) == FLAG_OVERFLOW)
         g_cpuState.m_pc += reladdr;
-        }
       break;
     case OPCODE_CLC:
       clearcarry();
