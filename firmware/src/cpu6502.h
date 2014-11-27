@@ -16,6 +16,12 @@ extern "C" {
 // State information
 //---------------------------------------------------------------------------
 
+//! Number of MMU pages (8 x 8K pages)
+#define MMU_PAGE_COUNT 8
+
+//! Size of the SPI transfer buffer
+#define SPI_BUFFER_SIZE 128
+
 #pragma pack(push, 1)
 
 /** CPU state information
@@ -47,14 +53,28 @@ typedef struct _TIME_OF_DAY {
   uint8_t m_second; //!< Seconds
   } TIME_OF_DAY;
 
+/** IO control bits
+ */
+typedef enum {
+  IOCTL_CONDATA   = 0x01, //!< Data is available to read from the console
+  IOCTL_PAGEWRITE = 0x02, //!< This bit must be set to enable writes to the page table
+  } IOCTL_FLAGS;
+
 /** Represents the memory mapped IO area
  *
  * This structure maintains data for the memory mapped IO area.
  */
 typedef struct _IO_STATE {
-  uint32_t    m_ips;      //!< Instructions per second (read only)
-  TIME_OF_DAY m_time;     //!< Current time (read/write)
-  uint8_t     m_pages[8]; //!< MMU page map (read/write)
+  uint32_t    m_ips;                     //!< Instructions per second (read only)
+  TIME_OF_DAY m_time;                    //!< Current time
+  uint8_t     m_ioctl;                   //!< IO control flags
+  uint8_t     m_conin;                   //!< Console input (read only)
+  uint8_t     m_conout;                  //!< Console output (write only)
+  uint8_t     m_slot0;                   //!< Slot 0 GPIO control
+  uint8_t     m_slot1;                   //!< Slot 1 GPIO control
+  uint8_t     m_spicmd;                  //!< SPI control byte
+  uint8_t     m_spibuf[SPI_BUFFER_SIZE]; //!< SPI transfer buffer
+  uint8_t     m_pages[MMU_PAGE_COUNT];   //!< MMU page map
   } IO_STATE;
 
 //! The global IO state information

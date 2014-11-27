@@ -26,6 +26,9 @@
 //! The start of ROM space in physical memory
 #define ROM_BASE 0x00080000L
 
+//! The base CPU address for the IO page
+#define IO_BASE 0xFF00
+
 #if defined(_MSC_VER) // For Windows simulator
 //! RAM memory
 uint8_t g_RAM[RAM_SIZE];
@@ -44,7 +47,10 @@ IO_STATE g_ioState;
  * state.
  */
 void cpuResetIO() {
-  uint8_t index;
+  uint8_t index, *pIO = (uint8_t *)&g_ioState;
+  // Clear the entire IO space
+  for(index=0; index<sizeof(IO_STATE); index++)
+    pIO[index] = 0;
   // Set up the default memory mapping
   for(index=0; index<6; index++)
     g_ioState.m_pages[index] = index;
@@ -74,6 +80,9 @@ uint8_t cpuReadByte(uint16_t address) {
   if (address == CONSOLE_IN)
     return readChar();
 #endif
+  // Check for IO reads
+  if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
+    return cpuReadIO(address - IO_BASE);
   // Read from memory
   uint32_t phys = getPhysicalAddress(address);
 #if defined(_MSC_VER) // For Windows simulator
@@ -98,10 +107,15 @@ void cpuWriteByte(uint16_t address, uint8_t value) {
     return;
     }
 #endif
-  // Write data to RAM only
-  uint32_t phys = getPhysicalAddress(address);
+  // Check for IO writes
+  if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
+    cpuWriteIO(address - IO_BASE, value);
+  else {
+    // Write data to RAM only
+    uint32_t phys = getPhysicalAddress(address);
 #if defined(_MSC_VER) // For Windows simulator
-  if (phys<RAM_SIZE)
-    g_RAM[phys] = value;
+    if (phys<RAM_SIZE)
+      g_RAM[phys] = value;
 #endif
+    }
   }
