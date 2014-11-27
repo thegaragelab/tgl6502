@@ -1,50 +1,28 @@
-/**************************************************************************/
-/*!
-    @file     main.c
-
-    @section LICENSE
-
-    Software License Agreement (BSD License)
-
-    Copyright (c) 2013, K. Townsend (microBuilder.eu)
-    All rights reserved.
-
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions are met:
-    1. Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
-    2. Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-    3. Neither the name of the copyright holders nor the
-    names of its contributors may be used to endorse or promote products
-    derived from this software without specific prior written permission.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-    EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-/**************************************************************************/
+/*--------------------------------------------------------------------------*
+* TGL-6502 SBC Emulator
+*---------------------------------------------------------------------------*
+* 27-Nov-2014 ShaneG
+*
+* This is the main LPC810 firmware for the TGL-6502 SBC. It is very minmal
+* due to the limited flash available but emulates a 6502 processor without
+* the undocumented instructions.
+*--------------------------------------------------------------------------*/
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "LPC8xx.h"
-#include "gpio.h"
-#include "uart.h"
 #include "cpu6502.h"
+#include "hardware.h"
+#include "LPC8xx.h"
 
 #if defined(__CODE_RED)
   #include <cr_section_macros.h>
   #include <NXP/crp.h>
   __CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
 #endif
+
+//----------------------------------------------------------------------------
+// Hardware setup
+//----------------------------------------------------------------------------
 
 void configurePins() {
   /* Enable SWM clock */
@@ -85,20 +63,38 @@ void configurePins() {
   #endif
   }
 
+//----------------------------------------------------------------------------
+// EEPROM loader mode implementation
+//----------------------------------------------------------------------------
+
+/** EEPROM loader entry point
+ *
+ * This allows a short wait (about 3s) to receive a start character to trigger
+ * the EEPROM loader mode. If that is not received we simply drop out and let
+ * the emulator start.
+ */
+static void eepromMode() {
+  // TODO: Implement this
+  }
+
+//----------------------------------------------------------------------------
+// Main program
+//----------------------------------------------------------------------------
+
+/** Main program
+ */
 int main(void) {
-  /* Initialise the GPIO block */
-  gpioInit();
-
-  /* Initialise the UART0 block for printf output */
-  uart0Init(115200);
-
-  /* Configure the switch matrix (setup pins for UART0 and GPIO) */
+  // Initialise the hardware
+  uartInit();
+  spiInit();
+  // Configure the switch matrix
   configurePins();
-
-  // TODO: Allow time to select EEPROM load mode
+  // Let the EEPROM loader start
+  eepromMode();
   // Go into main emulation loop
   cpuResetIO();
   cpuReset();
   while (true)
     cpuStep();
   }
+
