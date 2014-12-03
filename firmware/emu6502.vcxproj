@@ -80,8 +80,7 @@
   <ItemGroup>
     <ClCompile Include="main.c" />
     <ClCompile Include="src\cpu6502.c" />
-    <ClCompile Include="src\hardware.c" />
-    <ClCompile Include="src\memory.c" />
+    <ClCompile Include="winhardware.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\cpu6502.h" />

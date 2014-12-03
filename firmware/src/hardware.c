@@ -252,15 +252,6 @@ static void selectDevice(SPI_DEVICE device) {
 // Memory access
 //---------------------------------------------------------------------------
 
-//! Size of memory (using same size for ROM and RAM)
-#define MEMORY_SIZE (128 * 1024)
-
-//! The start of ROM space in physical memory
-#define ROM_BASE 0x00080000L
-
-//! The start of IO space in CPU memory
-#define IO_BASE 0xFF00
-
 /** SPI memory chip commands
  */
 typedef enum {

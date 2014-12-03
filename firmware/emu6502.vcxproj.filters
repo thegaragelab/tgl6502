@@ -21,10 +21,7 @@
     <ClCompile Include="src\cpu6502.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\memory.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\hardware.c">
+    <ClCompile Include="winhardware.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
