@@ -25,6 +25,49 @@ extern "C" {
 //! Size of EEPROM page (TODO: Can be up to 256, the larger the better)
 #define EEPROM_PAGE_SIZE 32
 
+#pragma pack(push, 1)
+
+/** Time of day information
+ *
+ * Provides a simple represention of the current time of day. There is no RTC
+ * in the system so this starts at 00:00:00 after reset and increments every
+ * second. This can be set by the emulated code to keep track of time.
+ */
+typedef struct _TIME_OF_DAY {
+  uint8_t m_hour;   //!< Hour (24 hour format)
+  uint8_t m_minute; //!< Minute
+  uint8_t m_second; //!< Seconds
+  } TIME_OF_DAY;
+
+/** IO control bits
+ */
+typedef enum {
+  IOCTL_CONDATA   = 0x01, //!< Data is available to read from the console
+  IOCTL_PAGEWRITE = 0x02, //!< This bit must be set to enable writes to the page table
+  } IOCTL_FLAGS;
+
+/** Represents the memory mapped IO area
+ *
+ * This structure maintains data for the memory mapped IO area.
+ */
+typedef struct _IO_STATE {
+  uint32_t    m_ips;                     //!< Instructions per second (read only)
+  TIME_OF_DAY m_time;                    //!< Current time
+  uint8_t     m_ioctl;                   //!< IO control flags
+  uint8_t     m_conin;                   //!< Console input (read only)
+  uint8_t     m_conout;                  //!< Console output (write only)
+  uint8_t     m_slot0;                   //!< Slot 0 GPIO control
+  uint8_t     m_slot1;                   //!< Slot 1 GPIO control
+  uint8_t     m_spicmd;                  //!< SPI control byte
+  uint8_t     m_spibuf[SPI_BUFFER_SIZE]; //!< SPI transfer buffer
+  uint8_t     m_pages[MMU_PAGE_COUNT];   //!< MMU page map
+  } IO_STATE;
+
+#pragma pack(pop)
+
+//! The global IO state information
+extern IO_STATE g_ioState;
+
 /** Initialise the UART interface
  *
  * Configures the UART for 57600 baud, 8N1.

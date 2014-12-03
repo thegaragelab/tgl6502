@@ -659,8 +659,6 @@ void cpuInterrupt(INTERRUPT interrupt) {
  * Simulates a hardware reset.
  */
 void cpuReset() {
-  // Do the IO reset as well (simulate a power cycle)
-  cpuResetIO();
   // Reset the CPU state
   g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFC) | ((uint16_t)cpuReadByte(0xFFFD) << 8);
   g_cpuState.m_a = 0;
