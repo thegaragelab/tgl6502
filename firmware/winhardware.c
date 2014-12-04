@@ -156,8 +156,12 @@ static uint32_t getPhysicalAddress(uint16_t address) {
  * @param address the offset into the IO area to read
  */
 static uint8_t cpuReadIO(uint16_t address) {
-  // TODO: Implement this
-  return 0;
+  uint8_t *pData = (uint8_t *)g_ioState;
+  switch(address) {
+  case IO_OFFSET_CONIN:
+    break;
+
+  return pData[address];
   }
 
 /** Write a byte to the IO region

@@ -27,18 +27,6 @@ extern "C" {
 
 #pragma pack(push, 1)
 
-/** Time of day information
- *
- * Provides a simple represention of the current time of day. There is no RTC
- * in the system so this starts at 00:00:00 after reset and increments every
- * second. This can be set by the emulated code to keep track of time.
- */
-typedef struct _TIME_OF_DAY {
-  uint8_t m_hour;   //!< Hour (24 hour format)
-  uint8_t m_minute; //!< Minute
-  uint8_t m_second; //!< Seconds
-  } TIME_OF_DAY;
-
 /** IO control bits
  */
 typedef enum {
@@ -51,8 +39,8 @@ typedef enum {
  * This structure maintains data for the memory mapped IO area.
  */
 typedef struct _IO_STATE {
-  uint32_t    m_ips;                     //!< Instructions per second (read only)
-  TIME_OF_DAY m_time;                    //!< Current time
+  uint16_t    m_time;                    //!< Current time (seconds since midnight)
+  uint8_t     m_dkips;                   //!< Instructions per second (in 10K units)
   uint8_t     m_ioctl;                   //!< IO control flags
   uint8_t     m_conin;                   //!< Console input (read only)
   uint8_t     m_conout;                  //!< Console output (write only)
@@ -62,6 +50,24 @@ typedef struct _IO_STATE {
   uint8_t     m_spibuf[SPI_BUFFER_SIZE]; //!< SPI transfer buffer
   uint8_t     m_pages[MMU_PAGE_COUNT];   //!< MMU page map
   } IO_STATE;
+
+/** IO Offsets
+ *
+ * Offset into the IO area for each entry. This *MUST* match the IO_STATE
+ * structure.
+ */
+typedef enum {
+  IO_OFFSET_TIME = 0,
+  IO_OFFSET_DKIPS = 2,
+  IO_OFFSET_IOCTL = 3,
+  IO_OFFSET_CONIN = 4,
+  IO_OFFSET_CONOUT = 5,
+  IO_OFFSET_SLOT0 = 6,
+  IO_OFFSET_SLOT1 = 7,
+  IO_OFFSET_SPICMD = 8,
+  IO_OFFSET_SPIBUFF = 9,
+  IO_OFFSET_PAGES = 9 + SPI_BUFFER_SIZE,
+  } IO_OFFSET;
 
 #pragma pack(pop)
 
