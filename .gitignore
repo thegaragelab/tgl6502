@@ -5,3 +5,7 @@ hardware/Plots/
 hardware/* Report).txt
 hardware/*.mop
 firmware/Debug/
+*Drill Data*.drl
+*.gml
+*.gbl
+*.txt
