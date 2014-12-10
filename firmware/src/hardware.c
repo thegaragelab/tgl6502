@@ -245,25 +245,15 @@ static GPIO_REG s_regsActive;
 //! Desired value s of IO expander registers
 static GPIO_REG s_regsDesired;
 
-/** Read a register on the IO expander
+/** Read or write a register on the IO expander
  */
-static uint8_t ioReadRegister(uint8_t reg) {
+static uint8_t ioRegister(uint8_t op, uint8_t reg, uint8_t data) {
   masterEnable();
-  spiTransfer(IO_READ);
+  spiTransfer(op);
   spiTransfer(reg);
-  uint8_t result = spiTransfer(0);
+  uint8_t result = spiTransfer(data);
   masterDisable();
   return result;
-  }
-
-/** Write a register on the IO expander
- */
-static void ioWriteRegister(uint8_t reg, uint8_t value) {
-  masterEnable();
-  spiTransfer(IO_READ);
-  spiTransfer(reg);
-  spiTransfer(value);
-  masterDisable();
   }
 
 /** Update the IO expander registers
@@ -274,15 +264,15 @@ static void ioWriteRegister(uint8_t reg, uint8_t value) {
  */
 static void ioUpdateRegisters() {
   if(s_regsDesired.m_iodir!=s_regsActive.m_iodir) {
-    ioWriteRegister(IODIRB, s_regsDesired.m_iodir);
+    ioRegister(IO_WRITE, IODIRB, s_regsDesired.m_iodir);
     s_regsActive.m_iodir = s_regsDesired.m_iodir;
     }
   if(s_regsDesired.m_gpio!=s_regsActive.m_gpio) {
-    ioWriteRegister(GPIOB, s_regsDesired.m_gpio);
+    ioRegister(IO_WRITE, GPIOB, s_regsDesired.m_gpio);
     s_regsActive.m_gpio = s_regsDesired.m_gpio;
     }
   if(s_regsDesired.m_pullup!=s_regsActive.m_pullup) {
-    ioWriteRegister(GPPUB, s_regsDesired.m_pullup);
+    ioRegister(IO_WRITE, GPPUB, s_regsDesired.m_pullup);
     s_regsActive.m_pullup = s_regsDesired.m_pullup;
     }
   }
