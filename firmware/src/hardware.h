@@ -30,29 +30,23 @@ extern uint32_t g_millis;
 
 #pragma pack(push, 1)
 
-/** IO control bits
- */
-typedef enum {
-  IOCTL_CONDATA   = 0x01, //!< Data is available to read from the console
-  IOCTL_PAGEWRITE = 0x02, //!< This bit must be set to enable writes to the page table
-  } IOCTL_FLAGS;
-
 /** Represents the memory mapped IO area
  *
  * This structure maintains data for the memory mapped IO area.
  */
 typedef struct _IO_STATE {
-  uint16_t    m_time;                    //!< Current time (seconds since midnight)
-  uint8_t     m_dkips;                   //!< Instructions per second (in 10K units)
-  uint8_t     m_ioctl;                   //!< IO control flags
-  uint8_t     m_conin;                   //!< Console input (read only)
-  uint8_t     m_conout;                  //!< Console output (write only)
-  uint8_t     m_slot0;                   //!< Slot 0 GPIO control
-  uint8_t     m_slot1;                   //!< Slot 1 GPIO control
-  uint8_t     m_spicmd;                  //!< SPI control byte
-  uint8_t     m_spibuf[SPI_BUFFER_SIZE]; //!< SPI transfer buffer
-  uint8_t     m_pages[MMU_PAGE_COUNT];   //!< MMU page map
+  uint16_t    m_time;                    //!< RW: Current time (seconds since midnight)
+  uint16_t    m_kips;                    //!< RO: Instructions per second (1000s)
+  uint8_t     m_ioctl;                   //!< RW: IO control flags
+  uint8_t     m_conin;                   //!< RO: Console input
+  uint8_t     m_conout;                  //!< RW: Console output
+  uint8_t     m_slot0;                   //!< RW: Expansion slot control
+  uint8_t     m_spicmd;                  //!< RW: SPI control byte
+  uint8_t     m_spibuf[SPI_BUFFER_SIZE]; //!< RW: SPI transfer buffer
+  uint8_t     m_pages[MMU_PAGE_COUNT];   //!< RW: MMU page map
   } IO_STATE;
+
+#pragma pack(pop)
 
 /** IO Offsets
  *
@@ -60,19 +54,46 @@ typedef struct _IO_STATE {
  * structure.
  */
 typedef enum {
-  IO_OFFSET_TIME = 0,
-  IO_OFFSET_DKIPS = 2,
-  IO_OFFSET_IOCTL = 3,
-  IO_OFFSET_CONIN = 4,
-  IO_OFFSET_CONOUT = 5,
-  IO_OFFSET_SLOT0 = 6,
-  IO_OFFSET_SLOT1 = 7,
+  IO_OFFSET_TIME  = 0,
+  IO_OFFSET_KIPS  = 2,
+  IO_OFFSET_IOCTL = 4,
+  IO_OFFSET_CONIN = 5,
+  IO_OFFSET_CONOUT = 6,
+  IO_OFFSET_SLOT0 = 7,
   IO_OFFSET_SPICMD = 8,
   IO_OFFSET_SPIBUFF = 9,
   IO_OFFSET_PAGES = 9 + SPI_BUFFER_SIZE,
   } IO_OFFSET;
 
-#pragma pack(pop)
+/** IO control bits and masks
+ */
+typedef enum {
+  IOCTL_LED0      = 0x01, //!< Control LED0 state
+  IOCTL_LED1      = 0x02, //!< Control LED1 state
+  IOCTL_CONDATA   = 0x04, //!< Data is available to read from the console
+  IOCTL_BUTTON    = 0x08, //!< Front panel button state
+  //--- IRQ source
+  IOCTL_IRQ_MASK  = 0x30, //!< Mask for IRQ source control
+  IOCTL_IRQ_NONE  = 0x00, //!< IRQ disabled
+  IOCTL_IRQ_TIMER = 0x10, //!< IRQ triggered by timer
+  IOCTL_IRQ_INPUT = 0x20, //!< IRQ triggered by console input
+  IOCTL_IRQ_SLOT  = 0x30, //!< IRQ triggered by slot D0
+  //--- NMI source
+  IOCTL_NMI_MASK  = 0xC0, //!< Mask for NMI source control
+  IOCTL_NMI_NONE  = 0x00, //!< NMI disabled
+  IOCTL_NMI_TIMER = 0x40, //!< NMI triggered by timer
+  IOCTL_NMI_INPUT = 0x80, //!< NMI triggered by console input
+  IOCTL_NMI_SLOT  = 0xC0, //!< NMI triggered by slot D0
+  } IOCTL_FLAGS;
+
+/** Slot 0 control bits and masks
+ */
+typedef enum {
+  SLOT_D0_VAL = 0x01, //!< Value of pin D0
+  SLOT_D1_VAL = 0x02, //!< Value of pin D1
+  SLOT_D0_DIR = 0x04, //!< Direction of pin D0
+  SLOT_D1_DIR = 0x08, //!< Direction of pin D1
+  } SLOT_FLAGS;
 
 //! The global IO state information
 extern IO_STATE g_ioState;

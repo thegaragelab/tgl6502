@@ -176,16 +176,6 @@ uint8_t spiTransfer(uint8_t data) {
 // Peripheral access helpers
 //---------------------------------------------------------------------------
 
-/** The external SPI devices available
- */
-typedef enum {
-  SPI_EEPROM = 0, //!< The EEPROM chip
-  SPI_RAM,        //!< SRAM chip
-  SPI_SLOT0,      //!< Expansion slot 0
-  SPI_SLOT1,      //!< Expansion slot 1
-  SPI_NONE,       //!< Deselect all devices
-  } SPI_DEVICE;
-
 //--- Read or write operation (IO Expander)
 #define IO_READ  0x41
 #define IO_WRITE 0x40
@@ -217,36 +207,75 @@ typedef enum {
   OLATB,
   } IO_REGISTER;
 
-typedef enum {
-  IO_SS0  = 0x01, //!< Slave select 0
-  IO_SS1  = 0x02, //!< Slave select 1
-  IO_SS2  = 0x04, //!< Slave select 2
-  IO_SS3  = 0x08, //!< Slave select 3
-  IO_IRQ  = 0x10, //!< IRQ from expansion slots
-  IO_LED1 = 0x20, //!< LED 1 on front panel
-  IO_LED0 = 0x40, //!< LED 2 on front panel
-  IO_BTN  = 0x80, //!< Button on front panel
-  } IO_BITS;
-
-/** Read a register on the IO expander
+/** Bit values and masks for the GPIO port
  */
-static uint8_t ioReadRegister(uint8_t reg) {
+typedef enum {
+  GPIO_SS0     = 0x01, //!< Slave select 0
+  GPIO_SS1     = 0x02, //!< Slave select 1
+  GPIO_SS2     = 0x04, //!< Slave select 2
+  GPIO_SS3     = 0x08, //!< Slave select 3
+  GPIO_SS_MASK = 0x0F, //!< Mask for slave select bits
+  GPIO_IRQ     = 0x10, //!< IRQ line to expansion slot
+  GPIO_LED1    = 0x20, //!< Front panel LED 1
+  GPIO_LED0    = 0x40, //!< Front panel LED 0
+  GPIO_BTN     = 0x80, //!< Front panel button
+  } GPIO_PORT;
+
+/** The external SPI devices available
+ */
+typedef enum {
+  SPI_NONE   = 0,        //!< Deselect all devices
+  SPI_EEPROM = GPIO_SS3, //!< The EEPROM chip
+  SPI_RAM    = GPIO_SS2, //!< SRAM chip
+  SPI_SLOT0  = GPIO_SS0, //!< Expansion slot 0
+  SPI_SLOT1  = GPIO_SS1, //!< Expansion slot 1
+  } SPI_DEVICE;
+
+
+/** The control registers we are interested in
+ */
+typedef struct _GPIO_REG {
+  uint8_t m_iodir;
+  uint8_t m_gpio;
+  uint8_t m_pullup;
+  } GPIO_REG;
+
+//! Current values of IO expander registers
+static GPIO_REG s_regsActive;
+
+//! Desired value s of IO expander registers
+static GPIO_REG s_regsDesired;
+
+/** Read or write a register on the IO expander
+ */
+static uint8_t ioRegister(uint8_t op, uint8_t reg, uint8_t data) {
   masterEnable();
-  spiTransfer(IO_READ);
+  spiTransfer(op);
   spiTransfer(reg);
-  uint8_t result = spiTransfer(0);
+  uint8_t result = spiTransfer(data);
   masterDisable();
   return result;
   }
 
-/** Write a register on the IO expander
+/** Update the IO expander registers
+ *
+ * We keep a copy of the desired register settings so we can batch changes
+ * across different functions. Updates are only done if something has changed
+ * which avoids unnecessary SPI transactions.
  */
-static void ioWriteRegister(uint8_t reg, uint8_t value) {
-  masterEnable();
-  spiTransfer(IO_READ);
-  spiTransfer(reg);
-  spiTransfer(value);
-  masterDisable();
+static void ioUpdateRegisters() {
+  if(s_regsDesired.m_iodir!=s_regsActive.m_iodir) {
+    ioRegister(IO_WRITE, IODIRB, s_regsDesired.m_iodir);
+    s_regsActive.m_iodir = s_regsDesired.m_iodir;
+    }
+  if(s_regsDesired.m_gpio!=s_regsActive.m_gpio) {
+    ioRegister(IO_WRITE, GPIOB, s_regsDesired.m_gpio);
+    s_regsActive.m_gpio = s_regsDesired.m_gpio;
+    }
+  if(s_regsDesired.m_pullup!=s_regsActive.m_pullup) {
+    ioRegister(IO_WRITE, GPPUB, s_regsDesired.m_pullup);
+    s_regsActive.m_pullup = s_regsDesired.m_pullup;
+    }
   }
 
 /** Select a peripheral device
@@ -257,7 +286,8 @@ static void ioWriteRegister(uint8_t reg, uint8_t value) {
  * @param device the peripheral to select.
  */
 static void selectDevice(SPI_DEVICE device) {
-  // TODO: Implement this
+  s_regsDesired.m_gpio = (s_regsDesired.m_gpio & ~GPIO_SS_MASK) | device;
+  ioUpdateRegisters();
   }
 
 //---------------------------------------------------------------------------
@@ -312,13 +342,17 @@ static void cpuWriteIO(uint16_t address, uint8_t byte) {
  */
 void hwInit() {
   // Set up the IO expander
-  ioWriteRegister(IODIRA, IO_IRQ | IO_BTN);
-  ioWriteRegister(GPIOA, IO_SS0 | IO_SS2);
+  s_regsDesired.m_iodir = (GPIO_IRQ | GPIO_BTN);
+  s_regsDesired.m_gpio = 0;
+  s_regsDesired.m_pullup = GPIO_BTN;
+  ioUpdateRegisters();
+/*
   // Set the SRAM chip (23LC1024) into byte transfer mode
 //  selectDevice(SPI_RAM);
 //  spiTransfer(0x01); // Write mode register
 //  spiTransfer(0x00); // Byte mode
 //  selectDevice(SPI_NONE);
+*/
   }
 
 /** Initialise the memory and IO subsystem
