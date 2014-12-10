@@ -128,10 +128,10 @@ bool uartAvail() {
 #define SPI_STAT_TXRDY          (1 << 1)
 
 //! Enable the master (IO expander) SPI device
-#define masterEnable()  LPC_GPIO_PORT->SET0 &= ~(1 << MASTER_SELECT)
+#define masterEnable()  LPC_GPIO_PORT->B0[1] = 0
 
 //! Disable the master (IO expander) SPI device
-#define masterDisable() LPC_GPIO_PORT->SET0 = 1 << MASTER_SELECT
+#define masterDisable() LPC_GPIO_PORT->B0[1] = 1
 
 /** Initialise SPI interface
  *
