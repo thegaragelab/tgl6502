@@ -275,15 +275,15 @@ static void ioWriteRegister(uint8_t reg, uint8_t value) {
 static void ioUpdateRegisters() {
   if(s_regsDesired.m_iodir!=s_regsActive.m_iodir) {
     ioWriteRegister(IODIRB, s_regsDesired.m_iodir);
-    s_regsActive.m_iodir = s_regsDesired.m_iodir);
+    s_regsActive.m_iodir = s_regsDesired.m_iodir;
     }
   if(s_regsDesired.m_gpio!=s_regsActive.m_gpio) {
     ioWriteRegister(GPIOB, s_regsDesired.m_gpio);
-    s_regsActive.m_gpio = s_regsDesired.m_gpio);
+    s_regsActive.m_gpio = s_regsDesired.m_gpio;
     }
   if(s_regsDesired.m_pullup!=s_regsActive.m_pullup) {
     ioWriteRegister(GPPUB, s_regsDesired.m_pullup);
-    s_regsActive.m_pullup = s_regsDesired.m_pullup);
+    s_regsActive.m_pullup = s_regsDesired.m_pullup;
     }
   }
 
