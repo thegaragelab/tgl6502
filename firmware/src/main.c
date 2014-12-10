@@ -30,43 +30,59 @@
 // Hardware setup
 //----------------------------------------------------------------------------
 
+//! System ticks timer
+static volatile uint32_t s_timeNow = 0;
+
+/** Implement the system tick interrupt
+ *
+ */
+void SysTick_Handler(void) {
+  s_timeNow++;
+  }
+
+/** Determine the duration (in ms) since the last sample
+ *
+ * @param sample the last millisecond count
+ */
+uint32_t timeDuration(uint32_t sample) {
+  uint32_t now = s_timeNow;
+  if(sample > now)
+    return now + (0xFFFFFFFFL - sample);
+  return now - sample;
+  }
+
+/** Configure the switch matrix
+ *
+ * [PinNo.][PinName]               [Signal]    [Module]
+ * 1       RESET/PIO0_5            SPI0_MISO   SPI0
+ * 2       PIO0_4                  U0_TXD      USART0
+ * 3       SWCLK/PIO0_3            SPI0_MOSI   SPI0
+ * 4       SWDIO/PIO0_2            SPI0_SCK    SPI0
+ * 5       PIO0_1/ACMP_I2/CLKIN    PIO0_1      GPIO0
+ * 6       VDD
+ * 7       VSS
+ * 8       PIO0_0/ACMP_I1          U0_RXD      USART0
+ */
 void configurePins() {
   /* Enable SWM clock */
-	//  LPC_SYSCON->SYSAHBCLKCTRL |= (1 << 7);  // this is already done in SystemInit()
-
+  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<7);
   /* Pin Assign 8 bit Configuration */
   /* U0_TXD */
   /* U0_RXD */
   LPC_SWM->PINASSIGN0 = 0xffff0004UL;
-
+  /* SPI0_SCK */
+  LPC_SWM->PINASSIGN3 = 0x02ffffffUL;
+  /* SPI0_MOSI */
+  /* SPI0_MISO */
+  LPC_SWM->PINASSIGN4 = 0xffff0503UL;
   /* Pin Assign 1 bit Configuration */
-  #if !defined(USE_SWD)
-    /* Pin setup generated via Switch Matrix Tool
-       ------------------------------------------------
-       PIO0_5 = RESET
-       PIO0_4 = U0_TXD
-       PIO0_3 = GPIO            - Disables SWDCLK
-       PIO0_2 = GPIO (User LED) - Disables SWDIO
-       PIO0_1 = GPIO
-       PIO0_0 = U0_RXD
-       ------------------------------------------------
-       NOTE: SWD is disabled to free GPIO pins!
-       ------------------------------------------------ */
-    LPC_SWM->PINENABLE0 = 0xffffffbfUL;
-  #else
-    /* Pin setup generated via Switch Matrix Tool
-       ------------------------------------------------
-       PIO0_5 = RESET
-       PIO0_4 = U0_TXD
-       PIO0_3 = SWDCLK
-       PIO0_2 = SWDIO
-       PIO0_1 = GPIO
-       PIO0_0 = U0_RXD
-       ------------------------------------------------
-       NOTE: LED on PIO0_2 unavailable due to SWDIO!
-       ------------------------------------------------ */
-    LPC_SWM->PINENABLE0 = 0xffffffb3UL;
-  #endif
+  LPC_SWM->PINENABLE0 = 0xffffffffUL;
+  /* Enable UART clock */
+  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<18);
+  // Set up the system tick timer
+  SysTick->LOAD = (SystemCoreClock / 1000 * 1/*# ms*/) - 1; /* Every 1 ms */
+  SysTick->VAL = 0;
+  SysTick->CTRL = 0x7; /* d2:ClkSrc=SystemCoreClock, d1:Interrupt=enabled, d0:SysTick=enabled */
   }
 
 //----------------------------------------------------------------------------
@@ -90,20 +106,37 @@ static void eepromMode() {
 /** Main program
  */
 int main(void) {
+  // Configure the switch matrix
+  configurePins();
   // Initialise the hardware
   uartInit();
   spiInit();
-  // Configure the switch matrix and the external hardware
-  configurePins();
   hwInit();
   // Show the banner
   uartWriteString(BANNER " " HW_VERSION "/" SW_VERSION "\n");
   // Let the EEPROM loader start
   eepromMode();
   // Go into main emulation loop
+  uint32_t now = s_timeNow;
+  while(true) {
+    // Show something every second
+    if(timeDuration(now)>=1000) {
+      now = s_timeNow;
+      uartWriteString("Beep!\n");
+      }
+    // Check for input
+    if(uartAvail()) {
+      uint8_t ch = uartRead();
+      if((ch>='a')&&(ch<='z'))
+        ch = (ch - 'a') + 'A';
+      uartWrite(ch);
+      }
+    }
+/*
   cpuResetIO();
   cpuReset();
   while (true)
     cpuStep();
+*/
   }
 

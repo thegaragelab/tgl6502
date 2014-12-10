@@ -25,6 +25,9 @@ extern "C" {
 //! Size of EEPROM page (TODO: Can be up to 256, the larger the better)
 #define EEPROM_PAGE_SIZE 32
 
+//! Millisecond system timer
+extern uint32_t g_millis;
+
 #pragma pack(push, 1)
 
 /** IO control bits

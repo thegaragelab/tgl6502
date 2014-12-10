@@ -119,6 +119,7 @@ bool uartAvail() {
 //--- SPI configuration flags
 #define SPI_CFG_ENABLE          (1 << 0)
 #define SPI_CFG_MASTER          (1 << 2)
+#define SPI_CFG_CPHA            (1 << 4)
 
 //--- SPI transfer flags
 #define SPI_TXDATCTL_EOT        (1 << 20)
@@ -153,8 +154,8 @@ void spiInit() {
   LPC_SYSCON->PRESETCTRL &= ~(0x1<<0);
   LPC_SYSCON->PRESETCTRL |= (0x1<<0);
   /* Set clock speed and mode */
-  LPC_SPI0->DIV = 3; // Use 10MHz (assuming 30MHz system clock)
-  LPC_SPI0->CFG = (SPI_CFG_MASTER & ~SPI_CFG_ENABLE);
+  LPC_SPI0->DIV = 14; // Use 2MHz (assuming 30MHz system clock)
+  LPC_SPI0->CFG = (SPI_CFG_MASTER | SPI_CFG_CPHA);
   LPC_SPI0->CFG |= SPI_CFG_ENABLE;
   }
 
@@ -215,6 +216,17 @@ typedef enum {
   OLATA,       //!< Output latch, Port A
   OLATB,
   } IO_REGISTER;
+
+typedef enum {
+  IO_SS0  = 0x01, //!< Slave select 0
+  IO_SS1  = 0x02, //!< Slave select 1
+  IO_SS2  = 0x04, //!< Slave select 2
+  IO_SS3  = 0x08, //!< Slave select 3
+  IO_IRQ  = 0x10, //!< IRQ from expansion slots
+  IO_LED1 = 0x20, //!< LED 1 on front panel
+  IO_LED0 = 0x40, //!< LED 2 on front panel
+  IO_BTN  = 0x80, //!< Button on front panel
+  } IO_BITS;
 
 /** Read a register on the IO expander
  */
@@ -299,12 +311,14 @@ static void cpuWriteIO(uint16_t address, uint8_t byte) {
  * components.
  */
 void hwInit() {
-  // TODO: Set up the IO expander
+  // Set up the IO expander
+  ioWriteRegister(IODIRA, IO_IRQ | IO_BTN);
+  ioWriteRegister(GPIOA, IO_SS0 | IO_SS2);
   // Set the SRAM chip (23LC1024) into byte transfer mode
-  selectDevice(SPI_RAM);
-  spiTransfer(0x01); // Write mode register
-  spiTransfer(0x00); // Byte mode
-  selectDevice(SPI_NONE);
+//  selectDevice(SPI_RAM);
+//  spiTransfer(0x01); // Write mode register
+//  spiTransfer(0x00); // Byte mode
+//  selectDevice(SPI_NONE);
   }
 
 /** Initialise the memory and IO subsystem
