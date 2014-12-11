@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.IO.Ports;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -22,6 +24,12 @@ namespace Flash65
         m_loader.ConnectionStateChanged += OnConnectionStateChanged;
         m_loader.Progress += OnProgress;
         UpdateUI("");
+		// Populate the list of available COM ports
+		List<string> ports = new List<string>(SerialPort.GetPortNames());
+		ports.Sort();
+		m_ctlPorts.Items.AddRange(ports.ToArray());
+		if (m_ctlPorts.Items.Count > 0)
+			m_ctlPorts.SelectedIndex = 0;
       }
 
       void OnProgress(DeviceLoader sender, ProgressState state, int position, int target, string message)
@@ -62,10 +70,18 @@ namespace Flash65
             m_btnConnect.Enabled = false;
             break;
         }
+		// Change the other buttons
         m_btnCancel.Enabled = m_loader.Busy;
         m_btnRead.Enabled = m_loader.ConnectionState == ConnectionState.Connected;
         m_btnWrite.Enabled = m_loader.ConnectionState == ConnectionState.Connected;
-        m_lblStatus.Text = message;
+		// Add the message (if any)
+		if ((message != null) && (message.Length > 0))
+		{
+		  m_txtActivity.Text += message;
+		  m_txtActivity.Text += "\r\n";
+		  m_txtActivity.SelectionStart = m_txtActivity.Text.Length;
+		  m_txtActivity.ScrollToCaret();
+		}
       }
 
       private void OnConnectClick(object sender, EventArgs e)
