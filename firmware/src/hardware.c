@@ -346,13 +346,6 @@ void hwInit() {
   s_regsDesired.m_gpio = 0;
   s_regsDesired.m_pullup = GPIO_BTN;
   ioUpdateRegisters();
-/*
-  // Set the SRAM chip (23LC1024) into byte transfer mode
-//  selectDevice(SPI_RAM);
-//  spiTransfer(0x01); // Write mode register
-//  spiTransfer(0x00); // Byte mode
-//  selectDevice(SPI_NONE);
-*/
   }
 
 /** Initialise the memory and IO subsystem
@@ -434,6 +427,17 @@ void cpuWriteByte(uint16_t address, uint8_t value) {
  * @param pData pointer to the buffer to hold the data.
  */
 void eepromReadPage(uint16_t address, uint8_t *pData) {
+  uint32_t phys = (uint32_t)address * EEPROM_PAGE_SIZE;
+  selectDevice(SPI_RAM);
+  spiTransfer(MEMORY_READ);
+  spiTransfer((uint8_t)((phys >> 16) & 0xFF));
+  spiTransfer((uint8_t)((phys >> 8) & 0xFF));
+  spiTransfer((uint8_t)(phys & 0xFF));
+  uint8_t index;
+  for(index=0; index<EEPROM_PAGE_SIZE; index++)
+    pData[index] = spiTransfer(0);
+  selectDevice(SPI_NONE);
+/*
   uint32_t phys = (uint32_t)address << 5; // Turn page into physical
   selectDevice(SPI_EEPROM);
   spiTransfer(MEMORY_READ);
@@ -444,6 +448,7 @@ void eepromReadPage(uint16_t address, uint8_t *pData) {
   for(index=0; index<EEPROM_PAGE_SIZE; index++)
     pData[index] = spiTransfer(0);
   selectDevice(SPI_NONE);
+*/
   }
 
 /** Write a page of data to the EEPROM
@@ -455,6 +460,17 @@ void eepromReadPage(uint16_t address, uint8_t *pData) {
  * @param pData pointer to the buffer holding the data.
  */
 void eepromWritePage(uint16_t address, uint8_t *pData) {
+  uint32_t phys = (uint32_t)address * EEPROM_PAGE_SIZE;
+  selectDevice(SPI_RAM);
+  spiTransfer(MEMORY_WRITE);
+  spiTransfer((uint8_t)((phys >> 16) & 0xFF));
+  spiTransfer((uint8_t)((phys >> 8) & 0xFF));
+  spiTransfer((uint8_t)(phys & 0xFF));
+  uint8_t index;
+  for(index=0; index<EEPROM_PAGE_SIZE; index++)
+    spiTransfer(pData[index]);
+  selectDevice(SPI_NONE);
+/*
   uint32_t phys = (uint32_t)address << 5; // Turn page into physical
   // Enable write operations
   selectDevice(SPI_EEPROM);
@@ -471,5 +487,6 @@ void eepromWritePage(uint16_t address, uint8_t *pData) {
     spiTransfer(pData[index]);
   selectDevice(SPI_NONE);
   // TODO: Should check status to wait for write to complete
+*/
   }
 

@@ -15,7 +15,7 @@
 #include "LPC8xx.h"
 
 //--- Version and identification information
-#define BANNER "TGL-6502"
+#define BANNER "\n\nTGL-6502"
 #define HW_VERSION "RevA"
 #define SW_VERSION "0.1"
 
@@ -96,7 +96,55 @@ void configurePins() {
  * the emulator start.
  */
 static void eepromMode() {
-  // TODO: Implement this
+  // Wait for up to 3 seconds for the entry byte (0x55)
+  uint8_t ch;
+  uint32_t start = s_timeNow;
+  while(timeDuration(start)<3000) {
+    if(uartAvail()) {
+      ch = uartRead();
+      if(ch==0x55)
+        break;
+      return;
+      }
+    }
+  if(timeDuration(start)>=3000)
+    return;
+  // Go into loading mode
+  uartWrite('+');
+  uint16_t addr, index, checksum;
+  uint8_t *pData = (uint8_t *)&g_ioState;
+  while(true) {
+    ch = uartRead();
+    // Every command has a two byte address
+    addr = uartRead();
+    addr = (addr << 8) | uartRead();
+    // Process according to command
+    if(ch=='R') {
+      // Read the page
+      eepromReadPage(addr, pData);
+      // Return it
+      uartWrite('+');
+      for(index=0; index<EEPROM_PAGE_SIZE; index++)
+        uartWrite(pData[index]);
+      }
+    else if(ch=='W') {
+      checksum = 0;
+      index = 0;
+      while(index<EEPROM_PAGE_SIZE) {
+        pData[index] = uartRead();
+        checksum += pData[index];
+        }
+      // Get the checksum and check it
+      index = uartRead();
+      index = (index << 8) | uartRead();
+      if(index!=checksum)
+        uartWrite('-');
+      else {
+        eepromWritePage(addr, pData);
+        uartWrite('+');
+        }
+      }
+    }
   }
 
 //----------------------------------------------------------------------------
@@ -123,6 +171,7 @@ int main(void) {
     if(timeDuration(now)>=1000) {
       now = s_timeNow;
       uartWriteString("Beep!\n");
+      hwInit();
       }
     // Check for input
     if(uartAvail()) {

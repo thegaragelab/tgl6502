@@ -23,7 +23,7 @@ extern "C" {
 #define IO_BASE 0xFF00
 
 //! Size of EEPROM page (TODO: Can be up to 256, the larger the better)
-#define EEPROM_PAGE_SIZE 32
+#define EEPROM_PAGE_SIZE 128
 
 //! Millisecond system timer
 extern uint32_t g_millis;
