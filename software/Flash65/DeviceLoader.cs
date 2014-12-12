@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace Flash65
 {
+  /// <summary>
+  /// State information for progress events.
+  /// </summary>
   public enum ProgressState
   {
     Read,   // Read a page
@@ -12,6 +15,9 @@ namespace Flash65
     Error,  // Intermediate (non-fatal) error
   }
 
+  /// <summary>
+  /// The possible connection states.
+  /// </summary>
   public enum ConnectionState
   {
     Connecting,   // Device is connecting
@@ -20,45 +26,119 @@ namespace Flash65
   }
 
   /// <summary>
+  /// The possible operations the device can be performing.
+  /// </summary>
+  public enum Operation
+  {
+	Idle,    // No operation is being performed
+	Reading, // Reading flash contents
+	Writing, // Writing flash contents
+  }
+
+  /// <summary>
   /// This class wraps all interaction with the remote machine in a background
   /// thread.
   /// </summary>
   public class DeviceLoader
   {
-    #region "Events"
-    public delegate void ProgressHandler(DeviceLoader sender, ProgressState state, int position, int target, string message);
+	#region "Constants"
+	/// <summary>
+	/// Total size of the EEPROM
+	/// </summary>
+	public const UInt32 EEPROM_SIZE = 128 * 1024;
+
+	/// <summary>
+	/// Size of individual pages in the EEPROM.
+	/// </summary>
+	public const UInt16 EEPROM_PAGE = 128;
+
+	/// <summary>
+	/// Maximum number of retries for failed operations
+	/// </summary>
+	public const int MAX_RETRIES = 3;
+	#endregion
+
+	#region "Events"
+	public delegate void ProgressHandler(DeviceLoader sender, ProgressState state, int position, int target, string message);
     public event ProgressHandler Progress;
+
+	public delegate void OperationCompleteHandler(DeviceLoader sender, Operation operation, bool withSuccess);
+	public event OperationCompleteHandler OperationComplete;
 
     public delegate void ConnectionStateChangedHandler(DeviceLoader sender, ConnectionState state);
     public event ConnectionStateChangedHandler ConnectionStateChanged;
+
+	public delegate void ErrorHandler(DeviceLoader sender, string message, Exception ex);
+	public event ErrorHandler Error;
     #endregion
 
     #region "Properties"
+	/// <summary>
+	/// The current connection state.
+	/// </summary>
     public ConnectionState ConnectionState
     {
       get;
       private set;
     }
 
+	/// <summary>
+	/// The active operation. This property is only valid when the device is
+	/// in the 'Connected' state.
+	/// </summary>
+	public Operation Operation
+	{
+	  get;
+	  private set;
+	}
+
+	/// <summary>
+	/// Indicates whether the loader is busy or not.
+	/// </summary>
     public bool Busy
     {
       get;
       private set;
     }
+
+	/// <summary>
+	/// Provide access to the data read or written to device.
+	/// </summary>
+	public byte[] Data
+	{
+		get;
+		private set;
+	}
     #endregion
 
     #region "Instance Variables"
-    private string m_port;     // Name of the port to use
-    private bool m_disconnect; // Request a disconnect
+    private string         m_port;       // Name of the port to use
+    private bool           m_disconnect; // Request a disconnect
+	private bool           m_cancel;     // Cancel of the current operation
+	private AutoResetEvent m_event;      // Event to control command queue
     #endregion
 
     #region "Event Dispatch"
+	private void FireError(string message, Exception ex = null)
+	{
+	  ErrorHandler handler = Error;
+	  if (handler != null)
+		handler(this, message, ex);
+	}
+
     private void FireProgress(ProgressState state, int position, int target, string message = null)
     {
       ProgressHandler handler = Progress;
       if (handler != null)
         handler(this, state, position, target, message);
     }
+
+	private void FireOperationComplete(Operation operation, bool withSuccess)
+	{
+	  OperationCompleteHandler handler = OperationComplete;
+	  if (handler != null)
+		handler(this, operation, withSuccess);
+	}
 
     private void FireConnectionStateChanged(ConnectionState state)
     {
@@ -69,6 +149,86 @@ namespace Flash65
     #endregion
 
     #region "Implementation"
+	/// <summary>
+	/// Read a page from the device EEPROM.
+	/// </summary>
+	/// <param name="page">The page number to read.</param>
+	/// <param name="buffer">The buffer to store the data.</param>
+	/// <param name="offset">Offset into the buffer to start writing.</param>
+	/// <returns>True if the device acknowledged success</returns>
+	private bool ReadPage(UInt16 page, byte[] buffer, UInt32 offset)
+	{
+	  // TODO: Implement this
+	  Thread.Sleep(25);
+	  return true;
+	}
+
+	/// <summary>
+	/// Write a page to the device EEPROM
+	/// </summary>
+	/// <param name="page">The page number to write</param>
+	/// <param name="buffer">The buffer containing the data to write.</param>
+	/// <param name="offset">Offset into the buffer to start writing from.</param>
+	/// <returns>True if the device acknowledged success</returns>
+	private bool WritePage(UInt16 page, byte[] buffer, UInt32 offset)
+	{
+	  // TODO: Implement this
+	  return true;
+	}
+
+	/// <summary>
+	/// This implements the reading loop. It will continue until the operation
+	/// is complete, is canceled or the device is disconnected.
+	/// </summary>
+	private void ReadData()
+	{
+		// Set state
+		Busy = true;
+		UInt32 offset = 0;
+		UInt16 page = 0;
+		int retries = 0;
+		while ((!m_cancel) && (!m_disconnect) && (offset < EEPROM_SIZE))
+		{
+			// Read the current page
+			FireProgress(ProgressState.Read, (int)offset, (int)EEPROM_SIZE, String.Format("Reading page {0}", page));
+			if (!ReadPage(page, Data, offset))
+			{
+				retries++;
+				if (retries>MAX_RETRIES) 
+				{
+				  FireError(String.Format("Read operation failed after {0} retries.", MAX_RETRIES));
+				  break;
+				}
+				else 
+				{
+				  FireProgress(ProgressState.Error, (int)offset, (int)EEPROM_SIZE, "Read failed, retrying");
+				}
+			}
+			else
+			{
+				retries = 0;
+				offset += EEPROM_PAGE;
+				page++;
+			}
+		}
+		// Signal the end of the operation
+		Busy = false;
+		Operation = Operation.Idle;
+		FireOperationComplete(Operation.Reading, retries == 0);
+	}
+
+	/// <summary>
+	/// This implements the writing loop. It will continue until the operation
+	/// is complete, is canceled or the device is disconnected.
+	/// </summary>
+	private void WriteData()
+	{
+
+	}
+
+	/// <summary>
+	/// Main thread loop.
+	/// </summary>
     private void Run()
     {
       System.Console.WriteLine("DeviceLoader: Starting background thread.");
@@ -82,14 +242,27 @@ namespace Flash65
       // Go into a loop processing commands
       try
       {
+		// Wait for a command
         while (!m_disconnect)
         {
-          // TODO: Check for a new command
+		  m_event.WaitOne(250);
+		  switch (Operation)
+		  {
+			case Operation.Idle:
+		  	  // Do nothing
+			  break;
+			case Operation.Reading:
+			  ReadData();
+			  break;
+			case Operation.Writing:
+			  WriteData();
+			  break;
+		  }
         }
       }
       catch (Exception ex)
       {
-        // TODO: Fire an error
+		FireError("Unhandled exception in communications thread.", ex);
       }
       finally
       {
@@ -106,7 +279,9 @@ namespace Flash65
     #region "Public Methods"
     public DeviceLoader()
     {
+	  m_event = new AutoResetEvent(false);
       ConnectionState = ConnectionState.Disconnected;
+	  Operation = Operation.Idle;
     }
 
     public void Connect(string port)
@@ -125,6 +300,58 @@ namespace Flash65
       // Flag for disconnection
       m_disconnect = true;
     }
+
+	/// <summary>
+	/// Write a block of data to the EEPROM. This is an asynchronous operation,
+	/// monitor the progress events to determine when it is complete.
+	/// </summary>
+	/// <param name="data">
+	///   The data to write to the EEPROM, must be non-null and contain at least
+	///   one byte.
+	/// </param>
+	public void Write(byte[] data)
+	{
+  	  // Make sure we can start an operation
+	  if ((ConnectionState != ConnectionState.Connected) || (Operation != Operation.Idle))
+		throw new InvalidOperationException("An operation is already active or the device is not connected.");
+	  // Make sure we have some data
+	  if ((data == null) || (data.Length == 0))
+		throw new ArgumentException("Write operation requires data to be provided.");
+	  // Set up our state
+	  Data = data;
+	  Operation = Operation.Writing;
+	  m_event.Set();
+	}
+
+	/// <summary>
+	/// Read the entire contents of the EEPROM into the data buffer. This is an
+	/// asynchronous operation - monitor the progress events to determine when
+	/// it is complete.
+	/// </summary>
+	public void Read()
+	{
+      // Make sure we can start an operation
+	  if ((ConnectionState != ConnectionState.Connected) || (Operation != Operation.Idle))
+		throw new InvalidOperationException("An operation is already active or the device is not connected.");
+	  // Set up the data buffer
+	  Data = new byte[EEPROM_SIZE];
+	  // Set up our state
+	  Operation = Operation.Reading;
+	  m_event.Set();
+	}
+
+	/// <summary>
+	/// Cancel the current operation.
+	/// </summary>
+	public void Cancel()
+	{
+	  // Make sure we are connected
+	  if (ConnectionState != ConnectionState.Connected)
+		throw new InvalidOperationException("Device is not connected.");
+	  // Only cancel if an operation is in progress
+	  if (Operation != Operation.Idle)
+		m_cancel = true;
+	}
     #endregion
   }
 }

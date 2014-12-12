@@ -35,11 +35,9 @@
 			this.m_btnConnect = new System.Windows.Forms.Button();
 			this.m_ctlPorts = new System.Windows.Forms.ComboBox();
 			this.label1 = new System.Windows.Forms.Label();
-			this.progressBar1 = new System.Windows.Forms.ProgressBar();
-			this.groupBox2 = new System.Windows.Forms.GroupBox();
-			this.m_txtActivity = new System.Windows.Forms.TextBox();
+			this.m_ctlProgress = new System.Windows.Forms.ProgressBar();
+			this.m_lblStatus = new System.Windows.Forms.Label();
 			this.groupBox1.SuspendLayout();
-			this.groupBox2.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_btnWrite
@@ -50,6 +48,7 @@
 			this.m_btnWrite.TabIndex = 1;
 			this.m_btnWrite.Text = "Write";
 			this.m_btnWrite.UseVisualStyleBackColor = true;
+			this.m_btnWrite.Click += new System.EventHandler(this.OnWriteClick);
 			// 
 			// m_btnRead
 			// 
@@ -59,6 +58,7 @@
 			this.m_btnRead.TabIndex = 2;
 			this.m_btnRead.Text = "Read";
 			this.m_btnRead.UseVisualStyleBackColor = true;
+			this.m_btnRead.Click += new System.EventHandler(this.OnReadClick);
 			// 
 			// m_btnCancel
 			// 
@@ -68,6 +68,7 @@
 			this.m_btnCancel.TabIndex = 3;
 			this.m_btnCancel.Text = "Cancel";
 			this.m_btnCancel.UseVisualStyleBackColor = true;
+			this.m_btnCancel.Click += new System.EventHandler(this.OnCancelClick);
 			// 
 			// groupBox1
 			// 
@@ -109,40 +110,28 @@
 			this.label1.TabIndex = 0;
 			this.label1.Text = "Port";
 			// 
-			// progressBar1
+			// m_ctlProgress
 			// 
-			this.progressBar1.Location = new System.Drawing.Point(8, 95);
-			this.progressBar1.Name = "progressBar1";
-			this.progressBar1.Size = new System.Drawing.Size(253, 23);
-			this.progressBar1.TabIndex = 5;
+			this.m_ctlProgress.Location = new System.Drawing.Point(8, 95);
+			this.m_ctlProgress.Name = "m_ctlProgress";
+			this.m_ctlProgress.Size = new System.Drawing.Size(253, 23);
+			this.m_ctlProgress.TabIndex = 5;
 			// 
-			// groupBox2
+			// m_lblStatus
 			// 
-			this.groupBox2.Controls.Add(this.m_txtActivity);
-			this.groupBox2.Location = new System.Drawing.Point(8, 125);
-			this.groupBox2.Name = "groupBox2";
-			this.groupBox2.Size = new System.Drawing.Size(253, 167);
-			this.groupBox2.TabIndex = 6;
-			this.groupBox2.TabStop = false;
-			this.groupBox2.Text = "Activity Log";
-			// 
-			// m_txtActivity
-			// 
-			this.m_txtActivity.Location = new System.Drawing.Point(9, 19);
-			this.m_txtActivity.Multiline = true;
-			this.m_txtActivity.Name = "m_txtActivity";
-			this.m_txtActivity.ReadOnly = true;
-			this.m_txtActivity.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-			this.m_txtActivity.Size = new System.Drawing.Size(238, 142);
-			this.m_txtActivity.TabIndex = 0;
+			this.m_lblStatus.Location = new System.Drawing.Point(5, 121);
+			this.m_lblStatus.Name = "m_lblStatus";
+			this.m_lblStatus.Size = new System.Drawing.Size(256, 18);
+			this.m_lblStatus.TabIndex = 6;
+			this.m_lblStatus.Text = "m_lblStatus";
 			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(269, 298);
-			this.Controls.Add(this.groupBox2);
-			this.Controls.Add(this.progressBar1);
+			this.ClientSize = new System.Drawing.Size(269, 148);
+			this.Controls.Add(this.m_lblStatus);
+			this.Controls.Add(this.m_ctlProgress);
 			this.Controls.Add(this.groupBox1);
 			this.Controls.Add(this.m_btnCancel);
 			this.Controls.Add(this.m_btnRead);
@@ -153,8 +142,6 @@
 			this.Text = "Flash65";
 			this.groupBox1.ResumeLayout(false);
 			this.groupBox1.PerformLayout();
-			this.groupBox2.ResumeLayout(false);
-			this.groupBox2.PerformLayout();
 			this.ResumeLayout(false);
 
         }
@@ -168,9 +155,8 @@
         private System.Windows.Forms.Button m_btnConnect;
         private System.Windows.Forms.ComboBox m_ctlPorts;
         private System.Windows.Forms.Label label1;
-		private System.Windows.Forms.ProgressBar progressBar1;
-		private System.Windows.Forms.GroupBox groupBox2;
-		private System.Windows.Forms.TextBox m_txtActivity;
+		private System.Windows.Forms.ProgressBar m_ctlProgress;
+		private System.Windows.Forms.Label m_lblStatus;
     }
 }
 
