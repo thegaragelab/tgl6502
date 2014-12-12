@@ -44,6 +44,18 @@ namespace Flash65
 		// Safe to work with UI
 		UpdateUI(String.Format("{0} complete.", operation));
 		// TODO: Handle the results of the operation
+		if ((operation == Operation.Reading) && withSuccess)
+		{
+		  SaveFileDialog dlg = new SaveFileDialog();
+		  dlg.DefaultExt = "rom";
+		  dlg.AddExtension = true;
+		  dlg.OverwritePrompt = true;
+		  dlg.Title = "Save ROM Image";
+		  dlg.Filter = "ROM Image (*.rom)|*.rom";
+		  DialogResult result = dlg.ShowDialog();
+		  if (result == DialogResult.OK)
+			File.WriteAllBytes(dlg.FileName, m_loader.Data);
+		}
 		// Clean up progress state
 		m_ctlProgress.Value = m_ctlProgress.Minimum;
 	  }
@@ -56,7 +68,9 @@ namespace Flash65
 		  return;
 		}
 		// Safe to work with UI
-		// TODO: Implement this
+		if (ex != null)
+		  message = message + "\n" + ex.ToString();
+		MessageBox.Show(message, "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
 	  }
 
       void OnProgress(DeviceLoader sender, ProgressState state, int position, int target, string message)
@@ -132,7 +146,22 @@ namespace Flash65
 
 	  private void OnWriteClick(object sender, EventArgs e)
 	  {
-	    // TODO: Implement this
+		  OpenFileDialog dlg = new OpenFileDialog();
+		  dlg.DefaultExt = "rom";
+		  dlg.AddExtension = true;
+		  dlg.Title = "Load ROM Image";
+		  dlg.Filter = "ROM Image (*.rom)|*.rom";
+		  dlg.CheckFileExists = true;
+		  DialogResult result = dlg.ShowDialog();
+		  if (result == DialogResult.OK)
+		  {
+		    byte[] data = File.ReadAllBytes(dlg.FileName);
+			if (data.Length==0)
+		      MessageBox.Show("File cannot be empty.", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+			else
+			  m_loader.Write(data);
+		  }
+	    // Update the UI
 		UpdateUI();
 	  }
 
@@ -148,5 +177,12 @@ namespace Flash65
 		  UpdateUI();
 	  }
 	  #endregion
+
+	  private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+	  {
+		if (m_loader.ConnectionState == ConnectionState.Connected)
+		  m_loader.Disconnect();
+	  }
+
 	}
 }

@@ -116,6 +116,7 @@ namespace Flash65
     private bool           m_disconnect; // Request a disconnect
 	private bool           m_cancel;     // Cancel of the current operation
 	private AutoResetEvent m_event;      // Event to control command queue
+	private Random         m_random;     // For debugging only 
     #endregion
 
     #region "Event Dispatch"
@@ -160,7 +161,8 @@ namespace Flash65
 	{
 	  // TODO: Implement this
 	  Thread.Sleep(25);
-	  return true;
+	  // 10% failure rate
+	  return (m_random.Next() % 10) > 0;
 	}
 
 	/// <summary>
@@ -173,7 +175,9 @@ namespace Flash65
 	private bool WritePage(UInt16 page, byte[] buffer, UInt32 offset)
 	{
 	  // TODO: Implement this
-	  return true;
+	  Thread.Sleep(25);
+	  // 10% failure rate
+	  return (m_random.Next() % 10) > 0;
 	}
 
 	/// <summary>
@@ -223,7 +227,81 @@ namespace Flash65
 	/// </summary>
 	private void WriteData()
 	{
-
+		// Set state
+		Busy = true;
+		UInt32 offset = 0;
+		UInt16 page = 0;
+		int write_retries = 0;
+		int read_retries = 0;
+		int verify_retries = 0;
+		bool verified = true;
+		byte[] buffer = new byte[EEPROM_PAGE];
+		while ((!m_cancel) && (!m_disconnect) && (offset < Data.Length))
+		{
+			// Read the current page
+			FireProgress(ProgressState.Write, (int)offset, Data.Length, String.Format("Writing page {0}", page));
+			if (!WritePage(page, Data, offset))
+			{
+				System.Console.WriteLine("Write failed.");
+				write_retries++;
+				if (write_retries > MAX_RETRIES)
+				{
+					FireError(String.Format("Write operation failed after {0} retries.", MAX_RETRIES));
+					break;
+				}
+				else
+				{
+					FireProgress(ProgressState.Error, (int)offset, Data.Length, "Write failed, retrying");
+				}
+			}
+			else
+			{
+				// Verify the page
+				read_retries = 0;
+				while (read_retries <= MAX_RETRIES)
+				{
+					FireProgress(ProgressState.Verify, (int)offset, Data.Length, String.Format("Verifying page {0}", page));
+					if (ReadPage(page, buffer, 0))
+					{
+						// TODO: Verify the contents
+						verified = (m_random.Next() % 10) > 0;
+						if (!verified)
+							System.Console.WriteLine("Verify failed.");
+						break;
+					}
+					// Try again
+					System.Console.WriteLine("Read failed.");
+					read_retries++;
+				}
+				if (read_retries > MAX_RETRIES)
+				{
+					FireError(String.Format("Read operation failed after {0} retries.", MAX_RETRIES));
+					break;
+				}
+				if (verify_retries > MAX_RETRIES)
+				{
+					FireError(String.Format("Verification failed after {0} retries.", MAX_RETRIES));
+					break;
+				}
+				if (!verified) 
+				{
+					FireProgress(ProgressState.Error, (int)offset, Data.Length, "Verification failed, retrying");
+					verify_retries++;
+				}
+				else
+				{
+				  read_retries = 0;
+				  write_retries = 0;
+				  verify_retries = 0;
+				  offset += EEPROM_PAGE;
+				  page++;
+				}
+			}
+		}
+		// Signal the end of the operation
+		Busy = false;
+		Operation = Operation.Idle;
+		FireOperationComplete(Operation.Writing, (read_retries + write_retries + verify_retries) == 0);
 	}
 
 	/// <summary>
@@ -282,6 +360,7 @@ namespace Flash65
 	  m_event = new AutoResetEvent(false);
       ConnectionState = ConnectionState.Disconnected;
 	  Operation = Operation.Idle;
+	  m_random = new Random();
     }
 
     public void Connect(string port)
