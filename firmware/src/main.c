@@ -14,10 +14,18 @@
 #include "hardware.h"
 #include "LPC8xx.h"
 
+//--- Firmware version
+#define FW_MAJOR 0
+#define FW_MINOR 1
+#define FW_VERSION ((FW_MAJOR << 4) | FW_MINOR)
+
 //--- Version and identification information
-#define BANNER "\n\nTGL-6502"
+#define _str(x) #x
+#define strval(x) _str(x)
+
+#define BANNER "TGL-6502"
 #define HW_VERSION "RevA"
-#define SW_VERSION "0.1"
+#define SW_VERSION strval(FW_MAJOR) "." strval(FW_MINOR)
 
 //-- Guff for Code Red
 #if defined(__CODE_RED)
@@ -160,12 +168,15 @@ int main(void) {
   uartInit();
   spiInit();
   hwInit();
+  // Wait a bit (this avoids initial line noise on the UART
+  uint32_t now = s_timeNow;
+  while(timeDuration(now)<100);
   // Show the banner
-  uartWriteString(BANNER " " HW_VERSION "/" SW_VERSION "\n");
+  uartWriteString("\n" BANNER " " HW_VERSION "/" SW_VERSION "\n");
   // Let the EEPROM loader start
   eepromMode();
   // Go into main emulation loop
-  uint32_t now = s_timeNow;
+  now = s_timeNow;
   while(true) {
     // Show something every second
     if(timeDuration(now)>=1000) {
