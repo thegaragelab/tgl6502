@@ -290,6 +290,30 @@ static void selectDevice(SPI_DEVICE device) {
   ioUpdateRegisters();
   }
 
+/** Perform a read or write operation on one of the memory chips
+ *
+ * @param cmd the command to perform
+ * @param phys the 'physical' address (21 bits, MSB indicates ROM/RAM)
+ * @param value the value to write for a write operation
+ *
+ * @return the value read for a read operation.
+ */
+static uint8_t memReadWrite(uint8_t cmd, uint32_t phys, uint8_t value) {
+  // Read or write memory
+  uint8_t result = 0;
+  selectDevice((phys&ROM_BASE)?SPI_EEPROM:SPI_RAM);
+  phys &= 0x0007FFFL;
+  if (phys<MEMORY_SIZE) {
+    spiTransfer(cmd);
+    spiTransfer((uint8_t)((phys >> 16) & 0xFF));
+    spiTransfer((uint8_t)((phys >> 8) & 0xFF));
+    spiTransfer((uint8_t)(phys & 0xFF));
+    result = spiTransfer(value);
+    }
+  selectDevice(SPI_NONE);
+  return result;
+  }
+
 //---------------------------------------------------------------------------
 // Memory access
 //---------------------------------------------------------------------------
@@ -375,22 +399,13 @@ void cpuResetIO() {
  */
 uint8_t cpuReadByte(uint16_t address) {
   // Check for IO reads
+/*
   if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
     return cpuReadIO(address - IO_BASE);
-  // Read from memory
-  uint8_t result = 0;
-  uint32_t phys = getPhysicalAddress(address);
-  selectDevice((phys&ROM_BASE)?SPI_EEPROM:SPI_RAM);
-  phys &= 0x0007FFFL;
-  if (phys<MEMORY_SIZE) {
-    spiTransfer(MEMORY_READ);
-    spiTransfer((uint8_t)((phys >> 16) & 0xFF));
-    spiTransfer((uint8_t)((phys >> 8) & 0xFF));
-    spiTransfer((uint8_t)(phys & 0xFF));
-    result = spiTransfer(0);
-    }
-  selectDevice(SPI_NONE);
-  return result;
+*/
+  if (address==0xF004)
+    return uartAvail()?uartRead():0;
+  return memReadWrite(MEMORY_READ, getPhysicalAddress(address), 0);
   }
 
 /** Write a single byte to the CPU address space.
@@ -399,20 +414,16 @@ uint8_t cpuReadByte(uint16_t address) {
  */
 void cpuWriteByte(uint16_t address, uint8_t value) {
   // Check for IO writes
-  if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
-    cpuWriteIO(address - IO_BASE, value);
+//  if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
+//    cpuWriteIO(address - IO_BASE, value);
+  if (address == 0xF001)
+    uartWrite(value);
   else {
     // Write data to RAM only
     uint32_t phys = getPhysicalAddress(address);
     if (phys>MEMORY_SIZE)
       return; // Out of RAM range
-    selectDevice(SPI_RAM);
-    spiTransfer(MEMORY_WRITE);
-    spiTransfer((uint8_t)((phys >> 16) & 0xFF));
-    spiTransfer((uint8_t)((phys >> 8) & 0xFF));
-    spiTransfer((uint8_t)(phys & 0xFF));
-    spiTransfer(value);
-    selectDevice(SPI_NONE);
+    memReadWrite(MEMORY_WRITE, phys, value);
     }
   }
 
