@@ -1,0 +1,4 @@
+= The TGL-6502 Single Board Computer
+
+This project implements 6502 emulator running in 4K of flash on an LPC810
+microcontroller.
