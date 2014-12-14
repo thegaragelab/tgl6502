@@ -131,8 +131,7 @@ namespace Flash65
       {
         if (m_loader.ConnectionState == ConnectionState.Disconnected)
         {
-          // TODO: Verify that a serial port is connected
-          m_loader.Connect("");
+          m_loader.Connect(m_ctlPorts.SelectedItem.ToString());
         }
         else
           m_loader.Disconnect();

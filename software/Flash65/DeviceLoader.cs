@@ -1,6 +1,10 @@
 ﻿using System;
+using System.IO;
+using System.IO.Ports;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Flash65
 {
@@ -56,6 +60,41 @@ namespace Flash65
     /// Maximum number of retries for failed operations
     /// </summary>
     public const int MAX_RETRIES = 3;
+
+    /// <summary>
+    /// The baud rate to use.
+    /// </summary>
+    private const int BAUD_RATE = 57600;
+
+    /// <summary>
+    /// Identifier string used to detect the device
+    /// </summary>
+    private const string IDENT_STRING = "TGL-6502 ";
+
+    /// <summary>
+    /// Character to send to request EEPROM mode
+    /// </summary>
+    private const byte MODE_REQUEST_CHAR = 0x55;
+
+    /// <summary>
+    /// Character sent to indicate success
+    /// </summary>
+    private const byte OPERATION_SUCCESS = 0x2B; // '+'
+
+    /// <summary>
+    /// Character sent to indicate failure
+    /// </summary>
+    private const byte OPERATION_FAILED = 0x2D; // '-'
+
+    /// <summary>
+    /// Command code to start reading
+    /// </summary>
+    private const byte COMMAND_READ = 0x52; // 'R'
+
+    /// <summary>
+    /// Command code to start writing
+    /// </summary>
+    private const byte COMMAND_WRITE = 0x57; // 'W'
     #endregion
 
     #region "Events"
@@ -116,7 +155,9 @@ namespace Flash65
     private bool           m_disconnect; // Request a disconnect
     private bool           m_cancel;     // Cancel of the current operation
     private AutoResetEvent m_event;      // Event to control command queue
+    private SerialPort     m_serial;     // The serial port for communication
     private Random         m_random;     // For debugging only 
+    private byte[]         m_scratch; // Scratchpad buffer
     #endregion
 
     #region "Event Dispatch"
@@ -150,6 +191,20 @@ namespace Flash65
     #endregion
 
     #region "Implementation"
+    private byte ReadByte()
+    {
+      byte result = (byte)m_serial.ReadByte();
+      System.Console.WriteLine("< 0x{0:X2}", result);
+      return result;
+    }
+
+    private void WriteByte(byte value)
+    {
+      m_scratch[0] = value;
+      m_serial.Write(m_scratch, 0, 1);
+      System.Console.WriteLine("> 0x{0:X2}", value);
+    }
+
     /// <summary>
     /// Read a page from the device EEPROM.
     /// </summary>
@@ -159,10 +214,26 @@ namespace Flash65
     /// <returns>True if the device acknowledged success</returns>
     private bool ReadPage(UInt16 page, byte[] buffer, UInt32 offset)
     {
-      // TODO: Implement this
-      Thread.Sleep(25);
-      // 10% failure rate
-      return (m_random.Next() % 10) > 0;
+      System.Console.WriteLine("Reading page {0}", page);
+      // Send the command
+      WriteByte(COMMAND_READ);
+      WriteByte((byte)(page >> 8));
+      WriteByte((byte)(page & 0xFF));
+      // Check the response
+      if (ReadByte() != OPERATION_SUCCESS)
+        return false;
+      // Read the data and calculate the checksum
+      UInt16 actual = 0;
+      for (int i = 0; i < EEPROM_PAGE; i++)
+      {
+        buffer[offset + i] = ReadByte();
+        actual += (UInt16)buffer[offset + i];
+      }
+      // Read the checksum
+      UInt16 checksum = (UInt16)(((UInt16)ReadByte()) << 8);
+      checksum |= (UInt16)ReadByte();
+      // And verify it
+      return actual == checksum;
     }
 
     /// <summary>
@@ -174,10 +245,23 @@ namespace Flash65
     /// <returns>True if the device acknowledged success</returns>
     private bool WritePage(UInt16 page, byte[] buffer, UInt32 offset)
     {
-      // TODO: Implement this
-      Thread.Sleep(25);
-      // 10% failure rate
-      return (m_random.Next() % 10) > 0;
+      System.Console.WriteLine("Writing page {0}", page);
+      // Send the command
+      WriteByte(COMMAND_WRITE);
+      WriteByte((byte)(page >> 8));
+      WriteByte((byte)(page & 0xFF));
+      // Write the data and calculate the checksum
+      UInt16 actual = 0;
+      for (int i = 0; i < EEPROM_PAGE; i++)
+      {
+        WriteByte(buffer[offset + i]);
+        actual += (UInt16)buffer[offset + i];
+      }
+      // Write the checksum
+      WriteByte((byte)(actual >> 8));
+      WriteByte((byte)(actual & 0xFF));
+      // Check the response
+      return ReadByte() == OPERATION_SUCCESS;
     }
 
     /// <summary>
@@ -191,6 +275,7 @@ namespace Flash65
       UInt32 offset = 0;
       UInt16 page = 0;
       int retries = 0;
+      System.Console.WriteLine("Reading EEPROM ...");
       while ((!m_cancel) && (!m_disconnect) && (offset < EEPROM_SIZE))
       {
 	// Read the current page
@@ -263,8 +348,9 @@ namespace Flash65
 	    FireProgress(ProgressState.Verify, (int)offset, Data.Length, String.Format("Verifying page {0}", page));
 	    if (ReadPage(page, buffer, 0))
 	    {
-	      // TODO: Verify the contents
-	      verified = (m_random.Next() % 10) > 0;
+              verified = true;
+              for (int i = 0; i < EEPROM_PAGE; i++)
+                verified = verified & (buffer[i] == Data[offset + i]);
 	      if (!verified)
 		System.Console.WriteLine("Verify failed.");
 	      break;
@@ -304,6 +390,15 @@ namespace Flash65
       FireOperationComplete(Operation.Writing, (read_retries + write_retries + verify_retries) == 0);
     }
 
+    private void CloseOnError(string message, Exception ex = null)
+    {
+      m_serial.Close();
+      m_serial = null;
+      FireError(message, ex);
+      ConnectionState = ConnectionState.Disconnected;
+      FireConnectionStateChanged(ConnectionState);
+    }
+
     /// <summary>
     /// Main thread loop.
     /// </summary>
@@ -313,7 +408,38 @@ namespace Flash65
       // Start the connection process
       ConnectionState = ConnectionState.Connecting;
       FireConnectionStateChanged(ConnectionState);
-      // TODO: Set up serial port
+      // Set up serial port
+      m_serial = new SerialPort(m_port, BAUD_RATE, Parity.None, 8, StopBits.One);
+      m_serial.ReadTimeout = 10000;
+      m_serial.Open();
+      try
+      {
+        // Wait for and verify the identity string
+        while (ReadByte() != '\n') ;
+        List<byte> ident = new List<byte>();
+        for (byte ch = ReadByte(); (ch != '\n') && (ident.Count < 128); ch = ReadByte())
+          ident.Add(ch);
+        ASCIIEncoding encoding = new ASCIIEncoding();
+        string decoded = encoding.GetString(ident.ToArray(), 0, ident.Count);
+        if (!decoded.StartsWith(IDENT_STRING))
+        {
+          CloseOnError("Failed to received identification string.");
+          return;
+        }
+        // Enter EEPROM mode
+        WriteByte(MODE_REQUEST_CHAR);
+        // Wait for the OK response
+        if (ReadByte() != OPERATION_SUCCESS)
+        {
+          CloseOnError("Device did not enter loading mode.");
+          return;
+        }
+      }
+      catch (Exception ex)
+      {
+        CloseOnError("Failed to establish connection.", ex);
+        return;
+      }
       // Switch to connected state
       ConnectionState = ConnectionState.Connected;
       FireConnectionStateChanged(ConnectionState);
@@ -344,7 +470,9 @@ namespace Flash65
       }
       finally
       {
-        // TODO: Close down the serial port
+        // Close down the serial port
+        m_serial.Close();
+        m_serial = null;
         // Change the connection state
         ConnectionState = ConnectionState.Disconnected;
         FireConnectionStateChanged(ConnectionState);
@@ -369,6 +497,7 @@ namespace Flash65
         throw new InvalidOperationException("Connection is already established.");
       // Store the port name and start the background thread
       m_port = port;
+      m_scratch = new byte[1];
       Task.Factory.StartNew(() => { Run(); });
     }
 
