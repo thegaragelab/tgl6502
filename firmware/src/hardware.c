@@ -297,9 +297,10 @@ static void selectDevice(SPI_DEVICE device) {
 /** SPI memory chip commands
  */
 typedef enum {
-  MEMORY_WRITE = 0x02, //! Write data to memory
-  MEMORY_READ  = 0x03, //! Read data from memory
-  MEMORY_WREN  = 0x06, //! Enable writes (EEPROM only)
+  MEMORY_WRITE  = 0x02, //! Write data to memory
+  MEMORY_READ   = 0x03, //! Read data from memory
+  MEMORY_STATUS = 0x05, //! Read status (EEPROM only)
+  MEMORY_WREN   = 0x06, //! Enable writes (EEPROM only)
   } MEMORY_COMMAND;
 
 /** Calculate the physical address with the current page settings.
@@ -427,18 +428,7 @@ void cpuWriteByte(uint16_t address, uint8_t value) {
  * @param pData pointer to the buffer to hold the data.
  */
 void eepromReadPage(uint16_t address, uint8_t *pData) {
-  uint32_t phys = (uint32_t)address * EEPROM_PAGE_SIZE;
-  selectDevice(SPI_RAM);
-  spiTransfer(MEMORY_READ);
-  spiTransfer((uint8_t)((phys >> 16) & 0xFF));
-  spiTransfer((uint8_t)((phys >> 8) & 0xFF));
-  spiTransfer((uint8_t)(phys & 0xFF));
-  uint8_t index;
-  for(index=0; index<EEPROM_PAGE_SIZE; index++)
-    pData[index] = spiTransfer(0);
-  selectDevice(SPI_NONE);
-/*
-  uint32_t phys = (uint32_t)address << 5; // Turn page into physical
+  uint32_t phys = (uint32_t)address * EEPROM_PAGE_SIZE; // Turn page into physical
   selectDevice(SPI_EEPROM);
   spiTransfer(MEMORY_READ);
   spiTransfer((uint8_t)((phys >> 16) & 0xFF));
@@ -448,7 +438,6 @@ void eepromReadPage(uint16_t address, uint8_t *pData) {
   for(index=0; index<EEPROM_PAGE_SIZE; index++)
     pData[index] = spiTransfer(0);
   selectDevice(SPI_NONE);
-*/
   }
 
 /** Write a page of data to the EEPROM
@@ -460,18 +449,7 @@ void eepromReadPage(uint16_t address, uint8_t *pData) {
  * @param pData pointer to the buffer holding the data.
  */
 void eepromWritePage(uint16_t address, uint8_t *pData) {
-  uint32_t phys = (uint32_t)address * EEPROM_PAGE_SIZE;
-  selectDevice(SPI_RAM);
-  spiTransfer(MEMORY_WRITE);
-  spiTransfer((uint8_t)((phys >> 16) & 0xFF));
-  spiTransfer((uint8_t)((phys >> 8) & 0xFF));
-  spiTransfer((uint8_t)(phys & 0xFF));
-  uint8_t index;
-  for(index=0; index<EEPROM_PAGE_SIZE; index++)
-    spiTransfer(pData[index]);
-  selectDevice(SPI_NONE);
-/*
-  uint32_t phys = (uint32_t)address << 5; // Turn page into physical
+  uint32_t phys = (uint32_t)address * EEPROM_PAGE_SIZE; // Turn page into physical
   // Enable write operations
   selectDevice(SPI_EEPROM);
   spiTransfer(MEMORY_WREN);
@@ -486,7 +464,13 @@ void eepromWritePage(uint16_t address, uint8_t *pData) {
   for(index=0; index<EEPROM_PAGE_SIZE; index++)
     spiTransfer(pData[index]);
   selectDevice(SPI_NONE);
-  // TODO: Should check status to wait for write to complete
-*/
+  // Monitor status and wait for write to complete
+  bool inprogress = true;
+  while(inprogress) {
+    selectDevice(SPI_EEPROM);
+    spiTransfer(MEMORY_STATUS);
+    inprogress = spiTransfer(0) & 0x01; // Check WIP (Write In Progress)
+    selectDevice(SPI_NONE);
+    }
   }
 
