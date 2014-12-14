@@ -178,29 +178,11 @@ int main(void) {
   // Show the banner
   uartWriteString("\n" BANNER " " HW_VERSION "/" SW_VERSION "\n");
   // Let the EEPROM loader start
-  eepromMode();
+//  eepromMode();
   // Go into main emulation loop
-  now = s_timeNow;
-  while(true) {
-    // Show something every second
-    if(timeDuration(now)>=1000) {
-      now = s_timeNow;
-      uartWriteString("Beep!\n");
-      hwInit();
-      }
-    // Check for input
-    if(uartAvail()) {
-      uint8_t ch = uartRead();
-      if((ch>='a')&&(ch<='z'))
-        ch = (ch - 'a') + 'A';
-      uartWrite(ch);
-      }
-    }
-/*
   cpuResetIO();
   cpuReset();
   while (true)
     cpuStep();
-*/
   }
 
