@@ -155,7 +155,7 @@ void spiInit() {
   LPC_SYSCON->PRESETCTRL |= (0x1<<0);
   /* Set clock speed and mode */
   LPC_SPI0->DIV = 14; // Use 2MHz (assuming 30MHz system clock)
-  LPC_SPI0->CFG = (SPI_CFG_MASTER | SPI_CFG_CPHA);
+  LPC_SPI0->CFG = SPI_CFG_MASTER;
   LPC_SPI0->CFG |= SPI_CFG_ENABLE;
   }
 
