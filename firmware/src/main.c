@@ -131,14 +131,18 @@ static void eepromMode() {
       // Read the page
       eepromReadPage(addr, pData);
       // Return it
+      checksum = 0;
       uartWrite('+');
-      for(index=0; index<EEPROM_PAGE_SIZE; index++)
+      for(index=0; index<EEPROM_PAGE_SIZE; index++) {
+        checksum += pData[index];
         uartWrite(pData[index]);
+        }
+      uartWrite(checksum >> 8);
+      uartWrite(checksum & 0xFF);
       }
     else if(ch=='W') {
       checksum = 0;
-      index = 0;
-      while(index<EEPROM_PAGE_SIZE) {
+      for(index=0; index<EEPROM_PAGE_SIZE; index++) {
         pData[index] = uartRead();
         checksum += pData[index];
         }
