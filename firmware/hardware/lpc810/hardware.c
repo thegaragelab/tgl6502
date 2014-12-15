@@ -17,6 +17,27 @@
 IO_STATE g_ioState;
 
 //---------------------------------------------------------------------------
+// Version information
+//
+// The version byte indicates the hardware platform in the upper nybble and
+// the firmware version in the lower. Available platforms are:
+//
+//  0 - The desktop simulator.
+//  1 - LPC810 based RevA hardware
+//  2 - LPC810 based RevB hardware
+//---------------------------------------------------------------------------
+
+// This files supports RevA and RevB boards so the HW version may be defined
+// as part of the build process. If not assume a RevA board.
+#if !defined(HW_VERSION)
+#  define HW_VERSION 1
+#endif
+#define FW_VERSION 1
+
+// The single version byte (readable from the IO block)
+#define VERSION_BYTE ((HW_VERSION << 4) | FW_VERSION)
+
+//---------------------------------------------------------------------------
 // Core UART access
 //---------------------------------------------------------------------------
 
@@ -389,6 +410,8 @@ void cpuResetIO() {
     g_ioState.m_pages[index] = index;
   g_ioState.m_pages[6] = 0x40; // ROM page 0
   g_ioState.m_pages[7] = 0x41; // ROM page 1
+  // Stash the version information
+  g_ioState.m_version = VERSION_BYTE;
   }
 
 /** Read a single byte from the CPU address space.
