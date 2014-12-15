@@ -38,16 +38,22 @@ extern "C" {
  * This structure maintains data for the memory mapped IO area.
  */
 typedef struct _IO_STATE {
-  uint16_t    m_time;                    //!< RW: Current time (seconds since midnight)
-  uint16_t    m_kips;                    //!< RO: Instructions per second (1000s)
+  uint8_t     m_version;                 //!< RO: Version byte
   uint8_t     m_ioctl;                   //!< RW: IO control flags
   uint8_t     m_conin;                   //!< RO: Console input
   uint8_t     m_conout;                  //!< RW: Console output
+  uint16_t    m_time;                    //!< RW: Current time (seconds since midnight)
+  uint16_t    m_kips;                    //!< RO: Instructions per second (1000s)
   uint8_t     m_slot0;                   //!< RW: Expansion slot control
   uint8_t     m_spicmd;                  //!< RW: SPI control byte
   uint8_t     m_spibuf[SPI_BUFFER_SIZE]; //!< RW: SPI transfer buffer
   uint8_t     m_pages[MMU_PAGE_COUNT];   //!< RW: MMU page map
   } IO_STATE;
+
+// Sanity check
+#if sizeof(IO_STATE) > 250
+#  error "IO block would overwrite interrupt vectors"
+#endif
 
 #pragma pack(pop)
 
@@ -57,15 +63,16 @@ typedef struct _IO_STATE {
  * structure.
  */
 typedef enum {
-  IO_OFFSET_TIME  = 0,
-  IO_OFFSET_KIPS  = 2,
-  IO_OFFSET_IOCTL = 4,
-  IO_OFFSET_CONIN = 5,
-  IO_OFFSET_CONOUT = 6,
-  IO_OFFSET_SLOT0 = 7,
-  IO_OFFSET_SPICMD = 8,
-  IO_OFFSET_SPIBUFF = 9,
-  IO_OFFSET_PAGES = 9 + SPI_BUFFER_SIZE,
+  IO_OFFSET_VERSION = 0,
+  IO_OFFSET_IOCTL = 1,
+  IO_OFFSET_CONIN = 2,
+  IO_OFFSET_CONOUT = 3,
+  IO_OFFSET_TIME  = 4,
+  IO_OFFSET_KIPS  = 6,
+  IO_OFFSET_SLOT0 = 8,
+  IO_OFFSET_SPICMD = 9,
+  IO_OFFSET_SPIBUFF = 10,
+  IO_OFFSET_PAGES = 10 + SPI_BUFFER_SIZE,
   } IO_OFFSET;
 
 /** IO control bits and masks
