@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <conio.h>
+#include <windows.h>
 #include <tgl6502.h>
 
 //! Simulated RAM
@@ -22,6 +23,41 @@ uint8_t g_ROM[MEMORY_SIZE];
 
 //! IO state information
 IO_STATE g_ioState;
+
+//---------------------------------------------------------------------------
+// Helper functions
+//---------------------------------------------------------------------------
+
+/** Calculate the physical address with the current page settings.
+ *
+ * @param address the 16 bit CPU address
+ *
+ * @return the 32 bit (20 used) physical address.
+ */
+static uint32_t getPhysicalAddress(uint16_t address) {
+  return ((uint32_t)address & 0x1FFF) | ((uint32_t)(g_ioState.m_pages[address >> 13] & 0x7F) << 13);
+  }
+
+/** Read a byte from the IO region
+ *
+ * @param address the offset into the IO area to read
+ */
+static uint8_t cpuReadIO(uint16_t address) {
+  // TODO: Implement this
+  }
+
+/** Write a byte to the IO region
+ *
+ * @param address the offset into the IO area to write
+ * @param value the value to write
+ */
+static void cpuWriteIO(uint16_t address, uint8_t byte) {
+  // TODO: Implement this
+  }
+
+//---------------------------------------------------------------------------
+// Public API
+//---------------------------------------------------------------------------
 
 /** Send a single character over the UART
  *
@@ -85,28 +121,28 @@ void hwInit() {
   printf("Read %u bytes from '6502.rom'\n", index);
   }
 
-/** Read a page of data from the EEPROM
+/** Get the current timestamp in milliseconds
  *
- * Fill a buffer with data from the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
+ * This function is used for basic duration timing. The base of the timestamp
+ * doesn't matter as long as the result increments every millisecond.
  *
- * @param address the page address to read
- * @param pData pointer to the buffer to hold the data.
+ * @return timestamp in milliseconds
  */
-void eepromReadPage(uint16_t address, uint8_t *pData) {
-  // NOTE: Not implemented for Windows test harness
+uint32_t getMillis() {
+  SYSTEMTIME time;
+  GetSystemTime(&time);
+  return (time.wSecond * 1000) + time.wMilliseconds;
   }
 
-/** Write a page of data to the EEPROM
+/** Determine the duration (in ms) since the last sample
  *
- * Write a buffer of data to the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * @param address the page address to write
- * @param pData pointer to the buffer holding the data.
+ * @param sample the last millisecond count
  */
-void eepromWritePage(uint16_t address, uint8_t *pData) {
-  // NOTE: Not implemented for Windows test harness
+uint32_t getDuration(uint32_t sample) {
+  uint32_t now = getMillis();
+  if(sample > now)
+    return now + (0xFFFFFFFFL - sample);
+  return now - sample;
   }
 
 /** Initialise the memory and IO subsystem
@@ -125,33 +161,6 @@ void cpuResetIO() {
     g_ioState.m_pages[index] = index;
   g_ioState.m_pages[6] = 0x40; // ROM page 0
   g_ioState.m_pages[7] = 0x41; // ROM page 1
-  }
-
-/** Calculate the physical address with the current page settings.
- *
- * @param address the 16 bit CPU address
- *
- * @return the 32 bit (20 used) physical address.
- */
-static uint32_t getPhysicalAddress(uint16_t address) {
-  return ((uint32_t)address & 0x1FFF) | ((uint32_t)(g_ioState.m_pages[address >> 13] & 0x7F) << 13);
-  }
-
-/** Read a byte from the IO region
- *
- * @param address the offset into the IO area to read
- */
-static uint8_t cpuReadIO(uint16_t address) {
-  // TODO: Implement this
-  }
-
-/** Write a byte to the IO region
- *
- * @param address the offset into the IO area to write
- * @param value the value to write
- */
-static void cpuWriteIO(uint16_t address, uint8_t byte) {
-  // TODO: Implement this
   }
 
 /** Read a single byte from the CPU address space.

@@ -6,8 +6,8 @@
 * This provides the hardware interface to the SPI peripheral and provides
 * the emulator access to them.
 *--------------------------------------------------------------------------*/
-#ifndef __HARDWARE_H
-#define __HARDWARE_H
+#ifndef __TGL6502_H
+#define __TGL6502_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,9 +30,6 @@ extern "C" {
 
 //! Size of EEPROM page (TODO: Can be up to 256, the larger the better)
 #define EEPROM_PAGE_SIZE 128
-
-//! Millisecond system timer
-extern uint32_t g_millis;
 
 #pragma pack(push, 1)
 
@@ -148,7 +145,7 @@ uint8_t uartRead();
 bool uartAvail();
 
 //---------------------------------------------------------------------------
-// Memory operations
+// Memory and simulated IO operations
 //---------------------------------------------------------------------------
 
 /** Initialise the memory and IO subsystem
@@ -194,8 +191,23 @@ void cpuStep();
 void cpuInterrupt(INTERRUPT interrupt);
 
 //---------------------------------------------------------------------------
-// Physical hardware initialisation
+// Physical hardware initialisation and helpers
 //---------------------------------------------------------------------------
+
+/** Get the current timestamp in milliseconds
+ *
+ * This function is used for basic duration timing. The base of the timestamp
+ * doesn't matter as long as the result increments every millisecond.
+ *
+ * @return timestamp in milliseconds
+ */
+uint32_t getMillis();
+
+/** Get the duration between a previous timestamp and the current.
+ *
+ * Determine the duration between a previous timestamp and the current time.
+ */
+uint32_t getDuration(uint32_t since);
 
 /** Initialise the external hardware
  *
@@ -207,5 +219,4 @@ void hwInit();
 }
 #endif
 
-#endif /* __HARDWARE_H */
-
+#endif /* __TGL6502_H */
