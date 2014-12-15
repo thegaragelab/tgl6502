@@ -12,8 +12,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <conio.h>
-#include "cpu6502.h"
-#include "hardware.h"
+#include <tgl6502.h>
 
 //! Simulated RAM
 uint8_t g_RAM[MEMORY_SIZE];
@@ -23,13 +22,6 @@ uint8_t g_ROM[MEMORY_SIZE];
 
 //! IO state information
 IO_STATE g_ioState;
-
-/** Initialise the UART interface
- *
- * Configures the UART for 57600 baud, 8N1.
- */
-void uartInit() {
-  }
 
 /** Send a single character over the UART
  *
@@ -71,32 +63,26 @@ bool uartAvail() {
   return _kbhit();
   }
 
-/** Initialise SPI interface
- *
- * Set up SPI0 as master in mode 0 (CPHA and CPOL = 0) at 10MHz with no delays.
- * SSEL is not assigned to an output pin, it must be controlled separately.
- */
-void spiInit() {
-  }
-
-/** Transfer a single data byte via SPI
- *
- * @param data the 8 bit value to send
- *
- * @return the data received in the transfer
- */
-uint8_t spiTransfer(uint8_t data) {
-  // NOTE: Not implemented for Windows test harness
-  return 0xFF;
-  }
-
 /** Initialise the external hardware
  *
- * This function needs to be called after the SPI bus has been initialised and
- * the pin switch matrix has been set up. It will initialise the external SPI
- * components.
+ * In the windows implementation we simply load the ROM file (6502.rom) into
+ * memory.
  */
 void hwInit() {
+  // Load the contents of ROM
+  FILE *fp = fopen("6502.rom", "rb");
+  if (fp == NULL) {
+    printf("ERROR: Can not load ROM file '6502.rom'\n");
+    exit(1);
+    }
+  uint16_t read, index = 0;
+  do {
+    read = fread(&g_ROM[index], 1, MEMORY_SIZE - index, fp);
+    index += read;
+    }
+  while (read > 0);
+  fclose(fp);
+  printf("Read %u bytes from '6502.rom'\n", index);
   }
 
 /** Read a page of data from the EEPROM
@@ -156,12 +142,7 @@ static uint32_t getPhysicalAddress(uint16_t address) {
  * @param address the offset into the IO area to read
  */
 static uint8_t cpuReadIO(uint16_t address) {
-  uint8_t *pData = (uint8_t *)g_ioState;
-  switch(address) {
-  case IO_OFFSET_CONIN:
-    break;
-
-  return pData[address];
+  // TODO: Implement this
   }
 
 /** Write a byte to the IO region
