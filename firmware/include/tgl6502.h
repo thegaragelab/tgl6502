@@ -19,23 +19,19 @@ extern "C" {
 //! Size of the SPI transfer buffer
 #define SPI_BUFFER_SIZE 128
 
-//! Size of memory (using same size for ROM and RAM)
-#define MEMORY_SIZE (128 * 1024)
-
 //! The start of ROM space in physical memory
 #define ROM_BASE 0x00080000L
 
 //! The start of IO space in CPU memory
 #define IO_BASE 0xFF00
 
-//! Size of EEPROM page (TODO: Can be up to 256, the larger the better)
-#define EEPROM_PAGE_SIZE 128
-
 #pragma pack(push, 1)
 
 /** Represents the memory mapped IO area
  *
- * This structure maintains data for the memory mapped IO area.
+ * This structure maintains data for the memory mapped IO area. When modifying
+ * the structure be sure that it does not exceed 250 bytes in size - the upper
+ * 6 bytes are required for the 6502 interrupt vectors.
  */
 typedef struct _IO_STATE {
   uint8_t     m_version;                 //!< RO: Version byte
@@ -49,11 +45,6 @@ typedef struct _IO_STATE {
   uint8_t     m_spibuf[SPI_BUFFER_SIZE]; //!< RW: SPI transfer buffer
   uint8_t     m_pages[MMU_PAGE_COUNT];   //!< RW: MMU page map
   } IO_STATE;
-
-// Sanity check
-#if sizeof(IO_STATE) > 250
-#  error "IO block would overwrite interrupt vectors"
-#endif
 
 #pragma pack(pop)
 
