@@ -13,6 +13,12 @@
 extern "C" {
 #endif
 
+//! Number of MMU pages (8 x 8K pages)
+#define MMU_PAGE_COUNT 8
+
+//! Size of the SPI transfer buffer
+#define SPI_BUFFER_SIZE 128
+
 //! Size of memory (using same size for ROM and RAM)
 #define MEMORY_SIZE (128 * 1024)
 
@@ -98,11 +104,16 @@ typedef enum {
 //! The global IO state information
 extern IO_STATE g_ioState;
 
-/** Initialise the UART interface
- *
- * Configures the UART for 57600 baud, 8N1.
+/** Types of interrupt that can be generated
  */
-void uartInit();
+typedef enum {
+  INT_IRQ, //!< The general interrupt request pin
+  INT_NMI, //!< The non-maskable interrupt pin
+  } INTERRUPT;
+
+//---------------------------------------------------------------------------
+// UART operations
+//---------------------------------------------------------------------------
 
 /** Send a single character over the UART
  *
@@ -136,48 +147,61 @@ uint8_t uartRead();
  */
 bool uartAvail();
 
-/** Initialise SPI interface
- *
- * Set up SPI0 as master in mode 0 (CPHA and CPOL = 0) at 10MHz with no delays.
- * SSEL is not assigned to an output pin, it must be controlled separately.
- */
-void spiInit();
+//---------------------------------------------------------------------------
+// Memory operations
+//---------------------------------------------------------------------------
 
-/** Transfer a single data byte via SPI
+/** Initialise the memory and IO subsystem
  *
- * @param data the 8 bit value to send
- *
- * @return the data received in the transfer
+ * This function should be called every time the 'cpuReset()' function is
+ * called. In ensures the memory mapped IO region is simulating the 'power on'
+ * state.
  */
-uint8_t spiTransfer(uint8_t data);
+void cpuResetIO();
+
+/** Read a single byte from the CPU address space.
+*
+* @param address the 16 bit address to read a value from.
+*
+* @return the byte read from the address.
+*/
+uint8_t cpuReadByte(uint16_t address);
+
+/** Write a single byte to the CPU address space.
+*
+* @param address the 16 bit address to write a value to
+*/
+void cpuWriteByte(uint16_t address, uint8_t value);
+
+//---------------------------------------------------------------------------
+// Functions implemented by the emulator.
+//---------------------------------------------------------------------------
+
+/** Reset the CPU
+ *
+ * Simulates a hardware reset.
+ */
+void cpuReset();
+
+/** Execute a single instruction
+ */
+void cpuStep();
+
+/** Trigger an interrupt
+ *
+ * @param interrupt the type of interrupt to generate
+ */
+void cpuInterrupt(INTERRUPT interrupt);
+
+//---------------------------------------------------------------------------
+// Physical hardware initialisation
+//---------------------------------------------------------------------------
 
 /** Initialise the external hardware
  *
- * This function needs to be called after the SPI bus has been initialised and
- * the pin switch matrix has been set up. It will initialise the external SPI
- * components.
+ * This function is responsible for setting up the native hardware interface.
  */
 void hwInit();
-
-/** Read a page of data from the EEPROM
- *
- * Fill a buffer with data from the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * @param address the page address to read
- * @param pData pointer to the buffer to hold the data.
- */
-void eepromReadPage(uint16_t address, uint8_t *pData);
-
-/** Write a page of data to the EEPROM
- *
- * Write a buffer of data to the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * @param address the page address to write
- * @param pData pointer to the buffer holding the data.
- */
-void eepromWritePage(uint16_t address, uint8_t *pData);
 
 #ifdef __cplusplus
 }
