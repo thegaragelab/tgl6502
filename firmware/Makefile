@@ -1,19 +1,53 @@
+# Makefile for TGL-6502
+#----------------------------------------------------------------------------
+# 16-Dec-2014 ShaneG
 #
-# gcc Makefile for LPC810
-# Kamal Mostafa <kamal@whence.com>
-#
-# License: Public Domain
-#
+# Moving from LPCXpresso project to a make based build. Original Makefile
+# from:
+#        gcc Makefile for LPC810
+#        Kamal Mostafa <kamal@whence.com>
+#        License: Public Domain
+#----------------------------------------------------------------------------
 
+# Emulation target
+#
+# Can be specified on command line, currently only mos6502 is supported and
+# is the default.
+TARGET ?= mos6502
+
+# Host processor
+#
+# Can be specified on command line, currently supported hosts include lpc810
+# (the default) and local (for simulation)
+HOST ?= lpc810
+
+# Hardware revision
+#
+# Set the default hardware revision. Available hardware platforms are:
+#  0 - Windows/Linux simulator
+#  1 - LPC810 RevA
+#  2 - LPC810 RevB
+ifeq ($(HOST),lpc810)
+HW_VERSION ?= 1
+else
+HW_VERSION ?= 0
+endif
+
+FILENAME = tgl6502
+LINKERSCRIPT = tgl6502.ld
+
+INC = -Iinclude -Ihardware/$(HOST) -Ihardware/common -Icpu/$(TARGET)
+
+# Set platform specific
+ifeq ($(HOST),lpc810)
 CROSS = arm-none-eabi-
 CPU = -mthumb -mcpu=cortex-m0plus -MD
 FPU = # -mfloat-abi=soft
-
-FILENAME = blinky
-LINKERSCRIPT = blinky.ld
-
 CFLAGS+= -Os --specs=nano.specs -ffunction-sections -fdata-sections -fno-builtin
+INC += -Iinclude/cmsis
+endif
 
+# Tools to use
 CC = ${CROSS}gcc
 LD = ${CROSS}ld
 OBJCOPY = ${CROSS}objcopy
@@ -27,23 +61,17 @@ LIBGCC = ${shell ${CC} ${CFLAGS} --print-libgcc-file-name}
 CFLAGS += $(CPU) $(FPU)
 LDFLAGS += --gc-sections
 
-
-INC += -I../cmsis
 CFLAGS += $(INC) -D__USE_CMSIS # -DCLOCK_SETUP=1
 
-BLINKY_OBJS = main.o \
-              gpio.o \
-              uart.o \
-              mrt.o \
-              printf.o \
-              printf-retarget.o \
-              system_LPC8xx.o \
-              gcc_startup_lpc8xx.o
+OBJECTS = main.o
+OBJECTS += $(patsubst %.c,%.o,$(wildcard cpu/$(TARGET)/*.c))
+OBJECTS += $(patsubst %.c,%.o,$(wildcard hardware/common/*.c))
+OBJECTS += $(patsubst %.c,%.o,$(wildcard hardware/$(HOST)/*.c))
 
 all: $(FILENAME).bin
 
-blinky.axf: $(FILENAME).ld $(BLINKY_OBJS)
-	@$(LD) -o $@ $(LDFLAGS) -T $(LINKERSCRIPT) $(BLINKY_OBJS) $(LIBGCC)
+$(FILENAME).axf: $(FILENAME).ld $(OBJECTS)
+	@$(LD) -o $@ $(LDFLAGS) -Map $(FILENAME).map -T $(LINKERSCRIPT) $(OBJECTS) "$(LIBGCC)"
 	-@echo ""
 	@$(SIZE) $(FILENAME).axf
 
