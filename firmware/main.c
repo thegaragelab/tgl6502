@@ -17,22 +17,22 @@ int main(int argc, char *argv[]) {
   // And run the emulator
   cpuResetIO();
   cpuReset();
-  uint32_t start = getMillis();
-  uint32_t instructions = 0;
-  uint8_t qsec = 0;
+//  uint32_t start = getMillis();
+//  uint32_t instructions = 0;
+//  uint8_t qsec = 0;
   while (true) {
-    if(getDuration(start)>=250) {
-      // 1/4 second interval
-      g_ioState.m_kips = (uint16_t)(instructions / 250);
-      instructions = 0;
-      if(++qsec==4) {
-      	qsec = 0;
-      	g_ioState.m_time++;
-        }
-      }
+//    if(getDuration(start)>=250) {
+//      // 1/4 second interval
+//      g_ioState.m_kips = (uint16_t)(instructions / 250);
+//      instructions = 0;
+//      if(++qsec==4) {
+//      	qsec = 0;
+//      	g_ioState.m_time++;
+//        }
+//      }
     // Execute a single instruction
     cpuStep();
-    instructions++;
+//    instructions++;
     }
   return 0;
   }
