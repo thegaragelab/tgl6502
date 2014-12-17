@@ -3,6 +3,8 @@
 This project implements 6502 emulator running in 4K of flash on an LPC810
 microcontroller. For more information please visit [this site](http://thegaragelab.com/posts/introducing-the-tgl-6502-single-board-computer.html).
 
+![The TGL-6502](http://thegaragelab.com/galleries/tgl6502/fully_assembled.thumbnail.png)
+
 ## Hardware
 
 The hardware is very simple - the CPU itself, an SPI IO expander, two SPI memory
