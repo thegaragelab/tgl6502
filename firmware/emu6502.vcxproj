@@ -79,12 +79,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cpu\mos6502\cpu6502.c" />
-    <ClCompile Include="hardware\winsim\hardware.c" />
+    <ClCompile Include="hardware\local\hardware.c" />
     <ClCompile Include="main.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu\mos6502\cpu6502.h" />
     <ClInclude Include="include\hardware.h" />
+    <ClInclude Include="include\tgl6502.h" />
     <ClInclude Include="src\cpu6502.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
