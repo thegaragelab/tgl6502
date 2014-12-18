@@ -9,12 +9,64 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "cpu6502.h"
-#include "hardware.h"
+#include <tgl6502.h>
 #include "LPC8xx.h"
+
+//! Size of memory (both RAM and ROM)
+#define MEMORY_SIZE (128 * 1024)
 
 //! IO state information
 IO_STATE g_ioState;
+
+//---------------------------------------------------------------------------
+// Version information
+//
+// The version byte indicates the hardware platform in the upper nybble and
+// the firmware version in the lower. Available platforms are:
+//
+//  0 - The desktop simulator.
+//  1 - LPC810 based RevA hardware
+//  2 - LPC810 based RevB hardware
+//---------------------------------------------------------------------------
+
+// This files supports RevA and RevB boards so the HW version may be defined
+// as part of the build process. If not assume a RevA board.
+#if !defined(HW_VERSION)
+#  define HW_VERSION 1
+#endif
+#define FW_VERSION 1
+
+// The single version byte (readable from the IO block)
+#define VERSION_BYTE ((HW_VERSION << 4) | FW_VERSION)
+
+//----------------------------------------------------------------------------
+// Hardware setup
+//----------------------------------------------------------------------------
+
+//! System ticks timer
+static volatile uint32_t s_timeNow = 0;
+
+/** Implement the system tick interrupt
+ *
+ */
+void SysTick_Handler(void) {
+  s_timeNow++;
+  }
+
+uint32_t getMillis() {
+  return s_timeNow;
+  }
+
+/** Determine the duration (in ms) since the last sample
+ *
+ * @param sample the last millisecond count
+ */
+uint32_t getDuration(uint32_t sample) {
+  uint32_t now = getMillis();
+  if(sample > now)
+    return now + (0xFFFFFFFFL - sample);
+  return now - sample;
+  }
 
 //---------------------------------------------------------------------------
 // Core UART access
@@ -36,31 +88,6 @@ IO_STATE g_ioState;
 #define UART_STATUS_TXIDLE   (1 << 3)
 #define UART_STATUS_CTSDEL   (1 << 5)
 #define UART_STATUS_RXBRKDEL (1 << 11)
-
-/** Initialise the UART interface
- *
- * Configures the UART for 57600 baud, 8N1.
- */
-void uartInit() {
-  /* Setup the clock and reset UART0 */
-  LPC_SYSCON->UARTCLKDIV = 1;
-  NVIC_DisableIRQ(UART0_IRQn);
-  LPC_SYSCON->SYSAHBCLKCTRL |=  (1 << 14);
-  LPC_SYSCON->PRESETCTRL    &= ~(1 << 3);
-  LPC_SYSCON->PRESETCTRL    |=  (1 << 3);
-  /* Configure UART0 */
-  LPC_USART0->CFG = UART_DATA_LENGTH_8 | UART_PARITY_NONE | UART_STOP_BIT_1;
-  LPC_USART0->BRG = __MAIN_CLOCK / 16 / BAUD_RATE - 1;
-  LPC_SYSCON->UARTFRGDIV = 0xFF;
-  LPC_SYSCON->UARTFRGMULT = (((__MAIN_CLOCK / 16) * (LPC_SYSCON->UARTFRGDIV + 1)) /
-    (BAUD_RATE * (LPC_USART0->BRG + 1))) - (LPC_SYSCON->UARTFRGDIV + 1);
-  /* Clear the status bits */
-  LPC_USART0->STAT = UART_STATUS_CTSDEL | UART_STATUS_RXBRKDEL;
-  /* Enable UART0 interrupt */
-//  NVIC_EnableIRQ(UART0_IRQn);
-  /* Enable UART0 */
-  LPC_USART0->CFG |= UART_ENABLE;
-  }
 
 /** Send a single character over the UART
  *
@@ -132,32 +159,6 @@ bool uartAvail() {
 
 //! Disable the master (IO expander) SPI device
 #define masterDisable() LPC_GPIO_PORT->B0[1] = 1
-
-/** Initialise SPI interface
- *
- * Set up SPI0 as master in mode 0 (CPHA and CPOL = 0) at 10MHz with no delays.
- * SSEL is not assigned to an output pin, it must be controlled separately.
- * This function also configures the pin we are using as the 'master select'
- */
-void spiInit() {
-  /* Enable AHB clock to the GPIO domain. */
-  LPC_SYSCON->SYSAHBCLKCTRL |=  (1 << 6);
-  LPC_SYSCON->PRESETCTRL    &= ~(1 << 10);
-  LPC_SYSCON->PRESETCTRL    |=  (1 << 10);
-  /* Set the master select to an output */
-  LPC_GPIO_PORT->DIR0 |= (1 << MASTER_SELECT);
-  /* Disable the master select */
-  masterDisable();
-  /* Enable SPI clock */
-  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<11);
-  /* Bring SPI out of reset */
-  LPC_SYSCON->PRESETCTRL &= ~(0x1<<0);
-  LPC_SYSCON->PRESETCTRL |= (0x1<<0);
-  /* Set clock speed and mode */
-  LPC_SPI0->DIV = 14; // Use 2MHz (assuming 30MHz system clock)
-  LPC_SPI0->CFG = SPI_CFG_MASTER;
-  LPC_SPI0->CFG |= SPI_CFG_ENABLE;
-  }
 
 /** Transfer a single data byte via SPI
  *
@@ -359,13 +360,80 @@ static void cpuWriteIO(uint16_t address, uint8_t byte) {
 // Emulator access functions
 //---------------------------------------------------------------------------
 
-/** Initialise the external hardware
+/** Initialise the hardware
  *
- * This function needs to be called after the SPI bus has been initialised and
- * the pin switch matrix has been set up. It will initialise the external SPI
- * components.
+ * In this function we set up the switch matrix, initialise the GPIO, UART
+ * and SPI modules and finally set up the IO expander.
+ *
+ * Switch matrix configuration
+ *
+ * [PinNo.][PinName]               [Signal]    [Module]
+ * 1       RESET/PIO0_5            SPI0_MISO   SPI0
+ * 2       PIO0_4                  U0_TXD      USART0
+ * 3       SWCLK/PIO0_3            SPI0_MOSI   SPI0
+ * 4       SWDIO/PIO0_2            SPI0_SCK    SPI0
+ * 5       PIO0_1/ACMP_I2/CLKIN    PIO0_1      GPIO0
+ * 6       VDD
+ * 7       VSS
+ * 8       PIO0_0/ACMP_I1          U0_RXD      USART0
  */
 void hwInit() {
+  /* Enable SWM clock */
+  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<7);
+  /* Pin Assign 8 bit Configuration */
+  /* U0_TXD */
+  /* U0_RXD */
+  LPC_SWM->PINASSIGN0 = 0xffff0004UL;
+  /* SPI0_SCK */
+  LPC_SWM->PINASSIGN3 = 0x02ffffffUL;
+  /* SPI0_MOSI */
+  /* SPI0_MISO */
+  LPC_SWM->PINASSIGN4 = 0xffff0503UL;
+  /* Pin Assign 1 bit Configuration */
+  LPC_SWM->PINENABLE0 = 0xffffffffUL;
+  /* Enable UART clock */
+  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<18);
+  // Set up the system tick timer
+  SysTick->LOAD = (SystemCoreClock / 1000 * 1/*# ms*/) - 1; /* Every 1 ms */
+  SysTick->VAL = 0;
+  SysTick->CTRL = 0x7; /* d2:ClkSrc=SystemCoreClock, d1:Interrupt=enabled, d0:SysTick=enabled */
+  // Set up the UART
+  /* Setup the clock and reset UART0 */
+  LPC_SYSCON->UARTCLKDIV = 1;
+  NVIC_DisableIRQ(UART0_IRQn);
+  LPC_SYSCON->SYSAHBCLKCTRL |=  (1 << 14);
+  LPC_SYSCON->PRESETCTRL    &= ~(1 << 3);
+  LPC_SYSCON->PRESETCTRL    |=  (1 << 3);
+  /* Configure UART0 */
+  LPC_USART0->CFG = UART_DATA_LENGTH_8 | UART_PARITY_NONE | UART_STOP_BIT_1;
+  LPC_USART0->BRG = __MAIN_CLOCK / 16 / BAUD_RATE - 1;
+  LPC_SYSCON->UARTFRGDIV = 0xFF;
+  LPC_SYSCON->UARTFRGMULT = (((__MAIN_CLOCK / 16) * (LPC_SYSCON->UARTFRGDIV + 1)) /
+    (BAUD_RATE * (LPC_USART0->BRG + 1))) - (LPC_SYSCON->UARTFRGDIV + 1);
+  /* Clear the status bits */
+  LPC_USART0->STAT = UART_STATUS_CTSDEL | UART_STATUS_RXBRKDEL;
+  /* Enable UART0 interrupt */
+//  NVIC_EnableIRQ(UART0_IRQn);
+  /* Enable UART0 */
+  LPC_USART0->CFG |= UART_ENABLE;
+  // Set up SPI module
+  /* Enable AHB clock to the GPIO domain. */
+  LPC_SYSCON->SYSAHBCLKCTRL |=  (1 << 6);
+  LPC_SYSCON->PRESETCTRL    &= ~(1 << 10);
+  LPC_SYSCON->PRESETCTRL    |=  (1 << 10);
+  /* Set the master select to an output */
+  LPC_GPIO_PORT->DIR0 |= (1 << MASTER_SELECT);
+  /* Disable the master select */
+  masterDisable();
+  /* Enable SPI clock */
+  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<11);
+  /* Bring SPI out of reset */
+  LPC_SYSCON->PRESETCTRL &= ~(0x1<<0);
+  LPC_SYSCON->PRESETCTRL |= (0x1<<0);
+  /* Set clock speed and mode */
+  LPC_SPI0->DIV = 14; // Use 2MHz (assuming 30MHz system clock)
+  LPC_SPI0->CFG = SPI_CFG_MASTER;
+  LPC_SPI0->CFG |= SPI_CFG_ENABLE;
   // Set up the IO expander
   s_regsDesired.m_iodir = (GPIO_IRQ | GPIO_BTN);
   s_regsDesired.m_gpio = 0;
@@ -389,6 +457,8 @@ void cpuResetIO() {
     g_ioState.m_pages[index] = index;
   g_ioState.m_pages[6] = 0x40; // ROM page 0
   g_ioState.m_pages[7] = 0x41; // ROM page 1
+  // Stash the version information
+  g_ioState.m_version = VERSION_BYTE;
   }
 
 /** Read a single byte from the CPU address space.
@@ -424,64 +494,6 @@ void cpuWriteByte(uint16_t address, uint8_t value) {
     if (phys>MEMORY_SIZE)
       return; // Out of RAM range
     memReadWrite(MEMORY_WRITE, phys, value);
-    }
-  }
-
-/** Read a page of data from the EEPROM
- *
- * Fill a buffer with data from the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * TODO: The SPI read sequence is now used in two places, break out into a
- *       separate function?
- *
- * @param address the page address to read
- * @param pData pointer to the buffer to hold the data.
- */
-void eepromReadPage(uint16_t address, uint8_t *pData) {
-  uint32_t phys = (uint32_t)address * EEPROM_PAGE_SIZE; // Turn page into physical
-  selectDevice(SPI_EEPROM);
-  spiTransfer(MEMORY_READ);
-  spiTransfer((uint8_t)((phys >> 16) & 0xFF));
-  spiTransfer((uint8_t)((phys >> 8) & 0xFF));
-  spiTransfer((uint8_t)(phys & 0xFF));
-  uint8_t index;
-  for(index=0; index<EEPROM_PAGE_SIZE; index++)
-    pData[index] = spiTransfer(0);
-  selectDevice(SPI_NONE);
-  }
-
-/** Write a page of data to the EEPROM
- *
- * Write a buffer of data to the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * @param address the page address to write
- * @param pData pointer to the buffer holding the data.
- */
-void eepromWritePage(uint16_t address, uint8_t *pData) {
-  uint32_t phys = (uint32_t)address * EEPROM_PAGE_SIZE; // Turn page into physical
-  // Enable write operations
-  selectDevice(SPI_EEPROM);
-  spiTransfer(MEMORY_WREN);
-  selectDevice(SPI_NONE);
-  // Transfer the data
-  selectDevice(SPI_EEPROM);
-  spiTransfer(MEMORY_WRITE);
-  spiTransfer((uint8_t)((phys >> 16) & 0xFF));
-  spiTransfer((uint8_t)((phys >> 8) & 0xFF));
-  spiTransfer((uint8_t)(phys & 0xFF));
-  uint8_t index;
-  for(index=0; index<EEPROM_PAGE_SIZE; index++)
-    spiTransfer(pData[index]);
-  selectDevice(SPI_NONE);
-  // Monitor status and wait for write to complete
-  bool inprogress = true;
-  while(inprogress) {
-    selectDevice(SPI_EEPROM);
-    spiTransfer(MEMORY_STATUS);
-    inprogress = spiTransfer(0) & 0x01; // Check WIP (Write In Progress)
-    selectDevice(SPI_NONE);
     }
   }
 
