@@ -18,13 +18,13 @@
     <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cpu6502.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="hardware\winsim\hardware.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cpu\mos6502\cpu6502.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="hardware\local\hardware.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -36,6 +36,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cpu\mos6502\cpu6502.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tgl6502.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
