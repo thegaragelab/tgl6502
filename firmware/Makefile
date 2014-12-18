@@ -33,18 +33,35 @@ else
 HW_VERSION ?= 0
 endif
 
+# Base filename
 FILENAME = tgl6502
-LINKERSCRIPT = tgl6502.ld
 
-INC = -Iinclude -Ihardware/$(HOST) -Ihardware/common -Icpu/$(TARGET)
+# Add flags to the C pre-processor
+#
+# We pass on the environment (target, host, hardware version) and set some
+# common include directories
+CFLAGS += -DSYS_TARGET=$(TARGET) -DSYS_HOST=$(HOST) -DHW_VER=$(HW_VERSION)
+CFLAGS += -Iinclude -Ihardware/$(HOST) -Ihardware/common -Icpu/$(TARGET)
 
-# Set platform specific
+# Add flags for the linker
+LDFLAGS += --gc-sections
+
+# Set LPC810 platform specific settings
 ifeq ($(HOST),lpc810)
 CROSS = arm-none-eabi-
-CPU = -mthumb -mcpu=cortex-m0plus -MD
-FPU = # -mfloat-abi=soft
-CFLAGS+= -Os --specs=nano.specs -ffunction-sections -fdata-sections -fno-builtin
-INC += -Iinclude/cmsis
+LINKERSCRIPT = $(FILENAME)_lpc810.ld
+BUILD_TARGET = $(FILENAME).axf $(FILENAME).bin $(FILENAME).hex
+# Adjust C command line appropriately
+CFLAGS += -mthumb -mcpu=cortex-m0plus -MD
+CFLAGS += -Os --specs=nano.specs -ffunction-sections -fdata-sections -fno-builtin
+CFLAGS += -Iinclude/cmsis -D__USE_CMSIS
+# Adjust LD command line appropriately
+LDFLAGS += -T $(LINKERSCRIPT)
+endif
+
+# Set local platform specific settings
+ifeq ($(HOST),local)
+BUILD_TARGET = $(FILENAME)
 endif
 
 # Tools to use
@@ -53,35 +70,48 @@ LD = ${CROSS}ld
 OBJCOPY = ${CROSS}objcopy
 SIZE = ${CROSS}size
 
-# use these on the $(LD) line, as needed:
-LIBM = ${shell ${CC} ${CFLAGS} --print-file-name=libm.a}
-LIBC = ${shell ${CC} ${CFLAGS} --print-file-name=libc.a}
-LIBGCC = ${shell ${CC} ${CFLAGS} --print-libgcc-file-name}
-
-CFLAGS += $(CPU) $(FPU)
-LDFLAGS += --gc-sections
-
-CFLAGS += $(INC) -D__USE_CMSIS # -DCLOCK_SETUP=1
-
+# Build the list of object files based on the selections
 OBJECTS = main.o
 OBJECTS += $(patsubst %.c,%.o,$(wildcard cpu/$(TARGET)/*.c))
 OBJECTS += $(patsubst %.c,%.o,$(wildcard hardware/common/*.c))
 OBJECTS += $(patsubst %.c,%.o,$(wildcard hardware/$(HOST)/*.c))
 
-all: $(FILENAME).bin
+# And the list of dependencies
+DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 
-$(FILENAME).axf: $(FILENAME).ld $(OBJECTS)
-	@$(LD) -o $@ $(LDFLAGS) -Map $(FILENAME).map -T $(LINKERSCRIPT) $(OBJECTS) "$(LIBGCC)"
+# use these on the $(LD) line, as needed:
+LIBM = ${shell ${CC} ${CFLAGS} --print-file-name=libm.a}
+LIBC = ${shell ${CC} ${CFLAGS} --print-file-name=libc.a}
+LIBGCC = ${shell ${CC} ${CFLAGS} --print-libgcc-file-name}
+
+#----------------------------------------------------------------------------
+# Build rules
+#----------------------------------------------------------------------------
+
+all: $(BUILD_TARGET)
+
+# How to build the local binary
+$(FILENAME): $(OBJECTS)
+	@$(LD) -o $@ $(LDFLAGS) $(OBJECTS)
+
+# How to build the AXF file
+$(FILENAME).axf: $(LINKERSCRIPT) $(OBJECTS)
+	@$(LD) -o $@ $(LDFLAGS) -Map $(FILENAME)_$(TARGET).map $(OBJECTS) "$(LIBGCC)"
 	-@echo ""
 	@$(SIZE) $(FILENAME).axf
 
-clean:
-	@rm -f *.o *.d
-	@rm -f $(FILENAME).axf $(FILENAME).hex $(FILENAME).bin
-
-%.bin:%.axf
-	-@echo ""
+# Generate a hex file
+%.hex:%.axf
 	-@echo "Generating $(FILENAME).hex (FlashMagic, etc.)"
 	@$(OBJCOPY) --strip-unneeded -O ihex $(FILENAME).axf $(FILENAME).hex
+
+# Generate a bin file
+%.bin:%.axf
+	-@echo ""
 	-@echo "Generating $(FILENAME).bin"
 	@$(OBJCOPY) --strip-unneeded -O binary $(FILENAME).axf $(FILENAME).bin
+
+# Clean up
+clean:
+	@rm -f $(OBJECTS) $(DEPENDS) $(BUILD_TARGET)
+
