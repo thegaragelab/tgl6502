@@ -11,9 +11,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <conio.h>
-#include "cpu6502.h"
-#include "hardware.h"
+#include <stdlib.h>
+#include <tgl6502.h>
+
+#if defined(_MSC_VER)
+#  include <conio.h>
+#else
+#  include <termios.h>
+#  include <unistd.h>
+#  include <sys/types.h>
+#  include <sys/time.h>
+#endif
+
+//! Size of memory (using same size for ROM and RAM)
+#define MEMORY_SIZE (128 * 1024)
 
 //! Simulated RAM
 uint8_t g_RAM[MEMORY_SIZE];
@@ -24,12 +35,57 @@ uint8_t g_ROM[MEMORY_SIZE];
 //! IO state information
 IO_STATE g_ioState;
 
-/** Initialise the UART interface
+//---------------------------------------------------------------------------
+// Version information
+//
+// The version byte indicates the hardware platform in the upper nybble and
+// the firmware version in the lower. Available platforms are:
+//
+//  0 - The desktop simulator.
+//  1 - LPC810 based RevA hardware
+//  2 - LPC810 based RevB hardware
+//---------------------------------------------------------------------------
+
+#define HW_VERSION 0
+#define FW_VERSION 1
+
+// The single version byte (readable from the IO block)
+#define VERSION_BYTE ((HW_VERSION << 4) | FW_VERSION)
+
+//---------------------------------------------------------------------------
+// Helper functions
+//---------------------------------------------------------------------------
+
+/** Calculate the physical address with the current page settings.
  *
- * Configures the UART for 57600 baud, 8N1.
+ * @param address the 16 bit CPU address
+ *
+ * @return the 32 bit (20 used) physical address.
  */
-void uartInit() {
+static uint32_t getPhysicalAddress(uint16_t address) {
+  return ((uint32_t)address & 0x1FFF) | ((uint32_t)(g_ioState.m_pages[address >> 13] & 0x7F) << 13);
   }
+
+/** Read a byte from the IO region
+ *
+ * @param address the offset into the IO area to read
+ */
+static uint8_t cpuReadIO(uint16_t address) {
+  // TODO: Implement this
+  }
+
+/** Write a byte to the IO region
+ *
+ * @param address the offset into the IO area to write
+ * @param value the value to write
+ */
+static void cpuWriteIO(uint16_t address, uint8_t byte) {
+  // TODO: Implement this
+  }
+
+//---------------------------------------------------------------------------
+// Public API
+//---------------------------------------------------------------------------
 
 /** Send a single character over the UART
  *
@@ -39,15 +95,8 @@ void uartInit() {
  * @param ch the character to send.
  */
 void uartWrite(uint8_t ch) {
-  printf("%c", ch);
-  }
-
-/** Send a sequence of bytes to the UART
- *
- * Sends the contents of a NUL terminated string over the UART interface.
- */
-void uartWriteString(const char *cszString) {
-  printf("%s", cszString);
+  putchar(ch);
+  fflush(stdout);
   }
 
 /** Read a single character from the UART
@@ -59,7 +108,13 @@ void uartWriteString(const char *cszString) {
  * @return the character read from the UART
  */
 uint8_t uartRead() {
+#if defined(_MSC_VER)
   return _getch();
+#else
+  // Translate LF to CR
+  uint8_t ch = getchar();
+  return (ch=='\n')?'\r':ch;
+#endif
   }
 
 /** Determine if data is available to read
@@ -68,59 +123,48 @@ uint8_t uartRead() {
  *              immediately.
  */
 bool uartAvail() {
+#if defined(_MSC_VER)
   return _kbhit();
-  }
-
-/** Initialise SPI interface
- *
- * Set up SPI0 as master in mode 0 (CPHA and CPOL = 0) at 10MHz with no delays.
- * SSEL is not assigned to an output pin, it must be controlled separately.
- */
-void spiInit() {
-  }
-
-/** Transfer a single data byte via SPI
- *
- * @param data the 8 bit value to send
- *
- * @return the data received in the transfer
- */
-uint8_t spiTransfer(uint8_t data) {
-  // NOTE: Not implemented for Windows test harness
-  return 0xFF;
+#else
+  struct timeval tv;
+  fd_set rdfs;
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;
+  FD_ZERO(&rdfs);
+  FD_SET (STDIN_FILENO, &rdfs);
+  select(STDIN_FILENO+1, &rdfs, NULL, NULL, &tv);
+  return FD_ISSET(STDIN_FILENO, &rdfs);
+#endif
   }
 
 /** Initialise the external hardware
  *
- * This function needs to be called after the SPI bus has been initialised and
- * the pin switch matrix has been set up. It will initialise the external SPI
- * components.
+ * In the windows implementation we simply load the ROM file (6502.rom) into
+ * memory.
  */
 void hwInit() {
-  }
-
-/** Read a page of data from the EEPROM
- *
- * Fill a buffer with data from the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * @param address the page address to read
- * @param pData pointer to the buffer to hold the data.
- */
-void eepromReadPage(uint16_t address, uint8_t *pData) {
-  // NOTE: Not implemented for Windows test harness
-  }
-
-/** Write a page of data to the EEPROM
- *
- * Write a buffer of data to the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * @param address the page address to write
- * @param pData pointer to the buffer holding the data.
- */
-void eepromWritePage(uint16_t address, uint8_t *pData) {
-  // NOTE: Not implemented for Windows test harness
+  // Load the contents of ROM
+  FILE *fp = fopen("6502.rom", "rb");
+  if (fp == NULL) {
+    printf("ERROR: Can not load ROM file '6502.rom'\n");
+    exit(1);
+    }
+  uint16_t read, index = 0;
+  do {
+    read = fread(&g_ROM[index], 1, MEMORY_SIZE - index, fp);
+    index += read;
+    }
+  while (read > 0);
+  fclose(fp);
+  printf("Read %u bytes from '6502.rom'\n", index);
+#if !defined(_MSC_VER)
+  // Change console mode
+  struct termios oldt, newt;
+  tcgetattr( STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~( ICANON | ECHO );
+  tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+#endif
   }
 
 /** Initialise the memory and IO subsystem
@@ -139,38 +183,8 @@ void cpuResetIO() {
     g_ioState.m_pages[index] = index;
   g_ioState.m_pages[6] = 0x40; // ROM page 0
   g_ioState.m_pages[7] = 0x41; // ROM page 1
-  }
-
-/** Calculate the physical address with the current page settings.
- *
- * @param address the 16 bit CPU address
- *
- * @return the 32 bit (20 used) physical address.
- */
-static uint32_t getPhysicalAddress(uint16_t address) {
-  return ((uint32_t)address & 0x1FFF) | ((uint32_t)(g_ioState.m_pages[address >> 13] & 0x7F) << 13);
-  }
-
-/** Read a byte from the IO region
- *
- * @param address the offset into the IO area to read
- */
-static uint8_t cpuReadIO(uint16_t address) {
-  uint8_t *pData = (uint8_t *)g_ioState;
-  switch(address) {
-  case IO_OFFSET_CONIN:
-    break;
-
-  return pData[address];
-  }
-
-/** Write a byte to the IO region
- *
- * @param address the offset into the IO area to write
- * @param value the value to write
- */
-static void cpuWriteIO(uint16_t address, uint8_t byte) {
-  // TODO: Implement this
+  // Stash the version information
+  g_ioState.m_version = VERSION_BYTE;
   }
 
 /** Read a single byte from the CPU address space.
