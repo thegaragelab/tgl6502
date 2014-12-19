@@ -10,8 +10,9 @@
 * Fake6502 CPU emulator core v1.1. Modifications have been made to allow it
 * run on an AVR processor.
 *--------------------------------------------------------------------------*/
-#include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <tgl6502.h>
 #include "cpu6502.h"
 
 //--- State information and internal variables
