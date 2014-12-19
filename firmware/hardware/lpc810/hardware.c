@@ -102,17 +102,6 @@ void uartWrite(uint8_t ch) {
   LPC_USART0->TXDATA = ch;
   }
 
-/** Send a sequence of bytes to the UART
- *
- * Sends the contents of a NUL terminated string over the UART interface.
- */
-void uartWriteString(const char *cszString) {
-  while(*cszString) {
-    uartWrite((uint8_t)*cszString);
-    cszString++;
-    }
-  }
-
 /** Read a single character from the UART
  *
  * This is a blocking operation. If no data is available the function will

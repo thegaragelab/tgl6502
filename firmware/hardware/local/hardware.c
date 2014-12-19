@@ -99,15 +99,6 @@ void uartWrite(uint8_t ch) {
   fflush(stdout);
   }
 
-/** Send a sequence of bytes to the UART
- *
- * Sends the contents of a NUL terminated string over the UART interface.
- */
-void uartWriteString(const char *cszString) {
-  puts(cszString);
-  fflush(stdout);
-  }
-
 /** Read a single character from the UART
  *
  * This is a blocking operation. If no data is available the function will
