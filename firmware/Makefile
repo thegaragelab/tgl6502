@@ -90,6 +90,13 @@ LIBGCC = ${shell ${CC} ${CFLAGS} --print-libgcc-file-name}
 
 all: $(BUILD_TARGET)
 
+# Rules to flash (depends on host processor)
+ifeq ($(HOST),lpc810)
+PORT ?= /dev/ttyUSB0
+flash: $(BUILD_TARGET)
+	lpc21isp $(FILENAME).hex $(PORT) 115200 14746
+endif
+
 # How to build the local binary
 $(FILENAME): $(OBJECTS)
 	@$(CC) -o $@ $(OBJECTS)
