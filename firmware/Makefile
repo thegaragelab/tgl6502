@@ -92,7 +92,7 @@ all: $(BUILD_TARGET)
 
 # How to build the local binary
 $(FILENAME): $(OBJECTS)
-	@$(LD) -o $@ $(LDFLAGS) $(OBJECTS)
+	@$(CC) -o $@ $(OBJECTS)
 
 # How to build the AXF file
 $(FILENAME).axf: $(LINKERSCRIPT) $(OBJECTS)

@@ -11,9 +11,17 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <conio.h>
-#include <windows.h>
+#include <stdlib.h>
 #include <tgl6502.h>
+
+#if defined(_MSC_VER)
+#  include <conio.h>
+#else
+#  include <termios.h>
+#  include <unistd.h>
+#  include <sys/types.h>
+#  include <sys/time.h>
+#endif
 
 //! Size of memory (using same size for ROM and RAM)
 #define MEMORY_SIZE (128 * 1024)
@@ -87,7 +95,8 @@ static void cpuWriteIO(uint16_t address, uint8_t byte) {
  * @param ch the character to send.
  */
 void uartWrite(uint8_t ch) {
-  printf("%c", ch);
+  putchar(ch);
+  fflush(stdout);
   }
 
 /** Send a sequence of bytes to the UART
@@ -95,7 +104,8 @@ void uartWrite(uint8_t ch) {
  * Sends the contents of a NUL terminated string over the UART interface.
  */
 void uartWriteString(const char *cszString) {
-  printf("%s", cszString);
+  puts(cszString);
+  fflush(stdout);
   }
 
 /** Read a single character from the UART
@@ -107,7 +117,13 @@ void uartWriteString(const char *cszString) {
  * @return the character read from the UART
  */
 uint8_t uartRead() {
+#if defined(_MSC_VER)
   return _getch();
+#else
+  // Translate LF to CR
+  uint8_t ch = getchar();
+  return (ch=='\n')?'\r':ch;
+#endif
   }
 
 /** Determine if data is available to read
@@ -116,7 +132,18 @@ uint8_t uartRead() {
  *              immediately.
  */
 bool uartAvail() {
+#if defined(_MSC_VER)
   return _kbhit();
+#else
+  struct timeval tv;
+  fd_set rdfs;
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;
+  FD_ZERO(&rdfs);
+  FD_SET (STDIN_FILENO, &rdfs);
+  select(STDIN_FILENO+1, &rdfs, NULL, NULL, &tv);
+  return FD_ISSET(STDIN_FILENO, &rdfs);
+#endif
   }
 
 /** Initialise the external hardware
@@ -139,30 +166,14 @@ void hwInit() {
   while (read > 0);
   fclose(fp);
   printf("Read %u bytes from '6502.rom'\n", index);
-  }
-
-/** Get the current timestamp in milliseconds
- *
- * This function is used for basic duration timing. The base of the timestamp
- * doesn't matter as long as the result increments every millisecond.
- *
- * @return timestamp in milliseconds
- */
-uint32_t getMillis() {
-  SYSTEMTIME time;
-  GetSystemTime(&time);
-  return (time.wSecond * 1000) + time.wMilliseconds;
-  }
-
-/** Determine the duration (in ms) since the last sample
- *
- * @param sample the last millisecond count
- */
-uint32_t getDuration(uint32_t sample) {
-  uint32_t now = getMillis();
-  if(sample > now)
-    return now + (0xFFFFFFFFL - sample);
-  return now - sample;
+#if !defined(_MSC_VER)
+  // Change console mode
+  struct termios oldt, newt;
+  tcgetattr( STDIN_FILENO, &oldt);
+  newt = oldt;
+  newt.c_lflag &= ~( ICANON | ECHO );
+  tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+#endif
   }
 
 /** Initialise the memory and IO subsystem
