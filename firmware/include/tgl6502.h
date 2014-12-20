@@ -6,15 +6,18 @@
 * This provides the hardware interface to the SPI peripheral and provides
 * the emulator access to them.
 *--------------------------------------------------------------------------*/
-#ifndef __HARDWARE_H
-#define __HARDWARE_H
+#ifndef __TGL6502_H
+#define __TGL6502_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-//! Size of memory (using same size for ROM and RAM)
-#define MEMORY_SIZE (128 * 1024)
+//! Number of MMU pages (8 x 8K pages)
+#define MMU_PAGE_COUNT 8
+
+//! Size of the SPI transfer buffer
+#define SPI_BUFFER_SIZE 128
 
 //! The start of ROM space in physical memory
 #define ROM_BASE 0x00080000L
@@ -22,24 +25,21 @@ extern "C" {
 //! The start of IO space in CPU memory
 #define IO_BASE 0xFF00
 
-//! Size of EEPROM page (TODO: Can be up to 256, the larger the better)
-#define EEPROM_PAGE_SIZE 128
-
-//! Millisecond system timer
-extern uint32_t g_millis;
-
 #pragma pack(push, 1)
 
 /** Represents the memory mapped IO area
  *
- * This structure maintains data for the memory mapped IO area.
+ * This structure maintains data for the memory mapped IO area. When modifying
+ * the structure be sure that it does not exceed 250 bytes in size - the upper
+ * 6 bytes are required for the 6502 interrupt vectors.
  */
 typedef struct _IO_STATE {
-  uint16_t    m_time;                    //!< RW: Current time (seconds since midnight)
-  uint16_t    m_kips;                    //!< RO: Instructions per second (1000s)
+  uint8_t     m_version;                 //!< RO: Version byte
   uint8_t     m_ioctl;                   //!< RW: IO control flags
   uint8_t     m_conin;                   //!< RO: Console input
   uint8_t     m_conout;                  //!< RW: Console output
+  uint16_t    m_time;                    //!< RW: Current time (seconds since midnight)
+  uint16_t    m_kips;                    //!< RO: Instructions per second (1000s)
   uint8_t     m_slot0;                   //!< RW: Expansion slot control
   uint8_t     m_spicmd;                  //!< RW: SPI control byte
   uint8_t     m_spibuf[SPI_BUFFER_SIZE]; //!< RW: SPI transfer buffer
@@ -54,15 +54,16 @@ typedef struct _IO_STATE {
  * structure.
  */
 typedef enum {
-  IO_OFFSET_TIME  = 0,
-  IO_OFFSET_KIPS  = 2,
-  IO_OFFSET_IOCTL = 4,
-  IO_OFFSET_CONIN = 5,
-  IO_OFFSET_CONOUT = 6,
-  IO_OFFSET_SLOT0 = 7,
-  IO_OFFSET_SPICMD = 8,
-  IO_OFFSET_SPIBUFF = 9,
-  IO_OFFSET_PAGES = 9 + SPI_BUFFER_SIZE,
+  IO_OFFSET_VERSION = 0,
+  IO_OFFSET_IOCTL = 1,
+  IO_OFFSET_CONIN = 2,
+  IO_OFFSET_CONOUT = 3,
+  IO_OFFSET_TIME  = 4,
+  IO_OFFSET_KIPS  = 6,
+  IO_OFFSET_SLOT0 = 8,
+  IO_OFFSET_SPICMD = 9,
+  IO_OFFSET_SPIBUFF = 10,
+  IO_OFFSET_PAGES = 10 + SPI_BUFFER_SIZE,
   } IO_OFFSET;
 
 /** IO control bits and masks
@@ -98,11 +99,16 @@ typedef enum {
 //! The global IO state information
 extern IO_STATE g_ioState;
 
-/** Initialise the UART interface
- *
- * Configures the UART for 57600 baud, 8N1.
+/** Types of interrupt that can be generated
  */
-void uartInit();
+typedef enum {
+  INT_IRQ, //!< The general interrupt request pin
+  INT_NMI, //!< The non-maskable interrupt pin
+  } INTERRUPT;
+
+//---------------------------------------------------------------------------
+// UART operations
+//---------------------------------------------------------------------------
 
 /** Send a single character over the UART
  *
@@ -112,12 +118,6 @@ void uartInit();
  * @param ch the character to send.
  */
 void uartWrite(uint8_t ch);
-
-/** Send a sequence of bytes to the UART
- *
- * Sends the contents of a NUL terminated string over the UART interface.
- */
-void uartWriteString(const char *cszString);
 
 /** Read a single character from the UART
  *
@@ -136,52 +136,79 @@ uint8_t uartRead();
  */
 bool uartAvail();
 
-/** Initialise SPI interface
- *
- * Set up SPI0 as master in mode 0 (CPHA and CPOL = 0) at 10MHz with no delays.
- * SSEL is not assigned to an output pin, it must be controlled separately.
- */
-void spiInit();
+//---------------------------------------------------------------------------
+// Memory and simulated IO operations
+//---------------------------------------------------------------------------
 
-/** Transfer a single data byte via SPI
+/** Initialise the memory and IO subsystem
  *
- * @param data the 8 bit value to send
- *
- * @return the data received in the transfer
+ * This function should be called every time the 'cpuReset()' function is
+ * called. In ensures the memory mapped IO region is simulating the 'power on'
+ * state.
  */
-uint8_t spiTransfer(uint8_t data);
+void cpuResetIO();
+
+/** Read a single byte from the CPU address space.
+*
+* @param address the 16 bit address to read a value from.
+*
+* @return the byte read from the address.
+*/
+uint8_t cpuReadByte(uint16_t address);
+
+/** Write a single byte to the CPU address space.
+*
+* @param address the 16 bit address to write a value to
+*/
+void cpuWriteByte(uint16_t address, uint8_t value);
+
+//---------------------------------------------------------------------------
+// Functions implemented by the emulator.
+//---------------------------------------------------------------------------
+
+/** Reset the CPU
+ *
+ * Simulates a hardware reset.
+ */
+void cpuReset();
+
+/** Execute a single instruction
+ */
+void cpuStep();
+
+/** Trigger an interrupt
+ *
+ * @param interrupt the type of interrupt to generate
+ */
+void cpuInterrupt(INTERRUPT interrupt);
+
+//---------------------------------------------------------------------------
+// Physical hardware initialisation and helpers
+//---------------------------------------------------------------------------
+
+/** Get the current timestamp in milliseconds
+ *
+ * This function is used for basic duration timing. The base of the timestamp
+ * doesn't matter as long as the result increments every millisecond.
+ *
+ * @return timestamp in milliseconds
+ */
+uint32_t getMillis();
+
+/** Get the duration between a previous timestamp and the current.
+ *
+ * Determine the duration between a previous timestamp and the current time.
+ */
+uint32_t getDuration(uint32_t since);
 
 /** Initialise the external hardware
  *
- * This function needs to be called after the SPI bus has been initialised and
- * the pin switch matrix has been set up. It will initialise the external SPI
- * components.
+ * This function is responsible for setting up the native hardware interface.
  */
 void hwInit();
-
-/** Read a page of data from the EEPROM
- *
- * Fill a buffer with data from the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * @param address the page address to read
- * @param pData pointer to the buffer to hold the data.
- */
-void eepromReadPage(uint16_t address, uint8_t *pData);
-
-/** Write a page of data to the EEPROM
- *
- * Write a buffer of data to the selected page. The buffer must be large
- * enough to hold the page (@see EEPROM_PAGE_SIZE).
- *
- * @param address the page address to write
- * @param pData pointer to the buffer holding the data.
- */
-void eepromWritePage(uint16_t address, uint8_t *pData);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __HARDWARE_H */
-
+#endif /* __TGL6502_H */
