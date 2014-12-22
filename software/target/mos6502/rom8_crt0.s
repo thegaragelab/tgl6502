@@ -5,8 +5,10 @@
         .export         __STARTUP__ : absolute = 1      ; Mark as startup
         .import         callmain
         .import         initlib, donelib
-        .import         exit
+        .import         zerobss
+        .import         _intIRQ, _intNMI
         .import         __RAM_START__, __RAM_SIZE__     ; Linker generated
+        .import         __STACKSIZE__                   ; Linker generated
         .import         __BSS_RUN__, __BSS_SIZE__
 
 
@@ -14,7 +16,7 @@
 
         .segment        "STARTUP"
 
-        cld
+init:   cld
         ldx     #$FF
         txs
         lda     #<(__RAM_START__ + __RAM_SIZE__ + __STACKSIZE__)
@@ -27,5 +29,12 @@
 _exit:  pha
         jsr     donelib
         pla
-        jmp     exit
+        ; This is for ROM, it should never exit
+stop:   jmp     stop
+
+        .segment        "VECTORS"
+
+        .addr           _intNMI
+        .addr           init
+        .addr           _intIRQ
 
