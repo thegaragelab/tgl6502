@@ -71,7 +71,22 @@ static uint32_t getPhysicalAddress(uint16_t address) {
  * @param address the offset into the IO area to read
  */
 static uint8_t cpuReadIO(uint16_t address) {
-  // TODO: Implement this
+  // Check for overflow
+  if(address>=sizeof(IO_STATE))
+    return 0xFF;
+  switch(address) {
+    case IO_OFFSET_CONIN:
+      return uartRead();
+    case IO_OFFSET_IOCTL:
+    case IO_OFFSET_SLOT0:
+      // Read current IO
+      if(uartAvail())
+        g_ioState.m_ioctl |= IOCTL_CONDATA;
+      else
+        g_ioState.m_ioctl &= ~IOCTL_CONDATA;
+      break;
+    }
+  return ((uint8_t *)&g_ioState)[address];
   }
 
 /** Write a byte to the IO region
@@ -80,7 +95,31 @@ static uint8_t cpuReadIO(uint16_t address) {
  * @param value the value to write
  */
 static void cpuWriteIO(uint16_t address, uint8_t byte) {
-  // TODO: Implement this
+  // Check for overflow
+  if(address>=sizeof(IO_STATE))
+    return;
+  switch(address) {
+    case IO_OFFSET_VERSION:
+    case IO_OFFSET_CONIN:
+    case IO_OFFSET_KIPS:
+    case IO_OFFSET_KIPS + 1:
+      // Read only entries
+      return;
+    case IO_OFFSET_CONOUT:
+      uartWrite(byte);
+      return;
+    }
+  // Update the value
+  ((uint8_t *)&g_ioState)[address] = byte;
+  switch(address) {
+    case IO_OFFSET_IOCTL:
+    case IO_OFFSET_SLOT0:
+      // Update IO state
+      break;
+    case IO_OFFSET_SPICMD:
+      // Do the SPI transaction
+      break;
+    }
   }
 
 //---------------------------------------------------------------------------
@@ -195,10 +234,8 @@ void cpuResetIO() {
 */
 uint8_t cpuReadByte(uint16_t address) {
   // Check for IO reads
-//  if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
-//    return cpuReadIO(address - IO_BASE);
-  if (address==0xF004)
-    return uartAvail()?uartRead():0;
+  if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
+    return cpuReadIO(address - IO_BASE);
   // Read from memory
   uint8_t result = 0;
   uint32_t phys = getPhysicalAddress(address);
@@ -215,10 +252,8 @@ uint8_t cpuReadByte(uint16_t address) {
 */
 void cpuWriteByte(uint16_t address, uint8_t value) {
   // Check for IO writes
-//  if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
-//    cpuWriteIO(address - IO_BASE, value);
-  if (address == 0xF001)
-    uartWrite(value);
+  if ((address>=IO_BASE)&&(address<(IO_BASE + sizeof(IO_STATE))))
+    cpuWriteIO(address - IO_BASE, value);
   else {
     // Write data to RAM only
     uint32_t phys = getPhysicalAddress(address);
