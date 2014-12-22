@@ -21,14 +21,14 @@ LDFLAGS = -C ../../mos6502/rom8.cfg -m $(FILENAME).map
 OBJECTS = ../../mos6502/rom8_crt0.o
 OBJECTS += $(patsubst %.c,%.o,$(wildcard *.c))
 
-all: $(FILENAME).bin
+all: $(FILENAME).rom
 
 clean:
 	rm -f $(OBJECTS) $(FILENAME).bin
 
 # How to build the binary
-$(FILENAME).bin: $(OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS)
+$(FILENAME).rom: $(OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS)  ../../mos6502/runtime.lib
 
 # How to build object files from C source
 %.o:%.c
@@ -36,4 +36,4 @@ $(FILENAME).bin: $(OBJECTS)
 
 # How to build object files from assembly
 %.o:%.s
-	$(AS) $(AFLAGS) -o $@ $^
+	$(AS) $(ASFLAGS) -o $@ $^
