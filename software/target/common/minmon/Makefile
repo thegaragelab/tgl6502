@@ -15,10 +15,11 @@ LD = ld65
 AS = ca65
 
 # Define options
-LDFLAGS = -C ../../mos6502/rom8.cfg -m $(FILENAME).map
+CFLAGS  = -t none
+LDFLAGS = -C ../../mos6502/rom16.cfg -m $(FILENAME).map
 
 # Build the list of object files based on the selections
-OBJECTS = ../../mos6502/rom8_crt0.o
+OBJECTS = ../../mos6502/romcrt0.o
 OBJECTS += $(patsubst %.c,%.o,$(wildcard *.c))
 
 all: $(FILENAME).rom
@@ -28,7 +29,7 @@ clean:
 
 # How to build the binary
 $(FILENAME).rom: $(OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS)  ../../mos6502/runtime.lib
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) ../../mos6502/runtime.lib
 
 # How to build object files from C source
 %.o:%.c
