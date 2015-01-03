@@ -1,0 +1,6 @@
+*.o
+*.lib
+*.rom
+*.bin
+*.map
+
