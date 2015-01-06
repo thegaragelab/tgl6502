@@ -207,7 +207,7 @@ typedef enum {
   SPI_NONE   = 0,        //!< Deselect all devices
   SPI_EEPROM = GPIO_SS0, //!< The EEPROM chip
   SPI_RAM    = GPIO_SS1, //!< SRAM chip
-  SPI_SLOT0  = GPIO_SS2, //!< Expansion slot 0
+  SPI_SLOT   = GPIO_SS2, //!< Expansion slot 0
   } SPI_DEVICE;
 
 
