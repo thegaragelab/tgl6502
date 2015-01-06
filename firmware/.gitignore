@@ -1,3 +1,7 @@
+## Binaries
+tgl6502
+*.rom
+
 ## General build artifacts
 *.o
 *.d
