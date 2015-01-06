@@ -46,7 +46,6 @@ static CMDINFO s_commands[] = {
  */
 MINMON_CMD cmdLookup(const char *cszCmd, uint8_t length) {
   uint8_t index = 0;
-  showHex(length, 2);
   while(s_commands[index].m_command!=CMD_INVALID) {
     if(strncmp(cszCmd, s_commands[index].m_cszCommand, length))
       return s_commands[index].m_command;

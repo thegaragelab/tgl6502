@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "minmon.h"
-#include "tgl6502.h"
 
 /** Compare two strings
  *
@@ -21,33 +20,11 @@
  * @return true if the strings are equal up to the specified length.
  */
 bool strncmp(const char *cszOne, const char *cszTwo, uint8_t length) {
-  for(;length;length--,cszOne++,cszTwo++) {
-    if(*cszOne!=*cszTwo)
+  uint8_t index;
+  for(index=0;index<length;index++)
+    if(cszOne[index]!=cszTwo[index])
       return false;
-    }
   return true;
-  }
-
-/** Display a hex value
- *
- * Display a hexadecimal number (up to 16 bits) on the console.
- *
- * @param value the value to display in hex
- * @param digits the number of digits to use (1 to 4)
- */
-void showHex(uint16_t value, int digits) {
-  uint8_t current, offset = (digits - 1) * 4;
-  uint16_t mask = 0x000f << offset;
-  while(mask) {
-    current = (value & mask) >> offset;
-    if(current>=10)
-      putch('A' + current - 10);
-    else
-      putch('0' + current);
-    // Adjust mask and offset
-    mask = mask >> 4;
-    offset -= 4;
-    }
   }
 
 /** Convert a hex string into a value
@@ -58,13 +35,14 @@ void showHex(uint16_t value, int digits) {
  * @return the value represented by the hex string.
  */
 uint16_t hexToWord(const char *cszHex, uint8_t length) {
+  uint8_t index;
   uint16_t value = 0;
-  while(length--) {
+  for(index=0;index<length;index++) {
     value = value << 4;
-    if((*cszHex>='A')&&(*cszHex<='F'))
-      value = value + (*cszHex - 'A' + 10);
-    else if((*cszHex>='0')&&(*cszHex<='9'))
-      value = value + (*cszHex - '0');
+    if((cszHex[index]>='A')&&(cszHex[index]<='F'))
+      value = value + (cszHex[index] - 'A' + 10);
+    else if((cszHex[index]>='0')&&(cszHex[index]<='9'))
+      value = value + (cszHex[index] - '0');
     }
   return value;
   }
