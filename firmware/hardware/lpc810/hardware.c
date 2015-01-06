@@ -167,45 +167,35 @@ uint8_t spiTransfer(uint8_t data) {
 //---------------------------------------------------------------------------
 
 //--- Read or write operation (IO Expander)
-#define IO_READ  0x41
-#define IO_WRITE 0x40
+#define IO_READ  0x47
+#define IO_WRITE 0x46
 
-/** Register definitions for the IO expander (MCP23S17)
+/** Register definitions for the IO expander (MCP23S08)
  */
 typedef enum {
-  IODIRA = 0,  //!< Direction register, Port A
-  IODIRB,
-  IPOLA,       //!< Polarity register, Port A
-  IPOLB,
-  GPINTENA,    //!< Interrupt on change, Port A
-  GPINTENB,
-  DEFVALA,     //!< Default compare value, Port A
-  DEFVALB,
-  INTCONA,     //!< Interrupt control, Port A
-  INTCONB,
-  IOCON,       //!< Module control
-  IOCON_,      //!< Mirror of above
-  GPPUA,       //!< Pull up resistor control
-  GPPUB,
-  INTFA,       //!< Interrupt flag register, Port A
-  INTFB,
-  INTCAPA,     //!< Interrupt capture, Port A
-  INTCAPB,
-  GPIOA,       //!< GPIO, Port A
-  GPIOB,
-  OLATA,       //!< Output latch, Port A
-  OLATB,
+  IODIR = 0, //!< Direction register
+  IPOL,      //!< Polarity register
+  GPINTEN,   //!< Interrupt on change
+  DEFVAL,    //!< Default compare value
+  INTCON,    //!< Interrupt control
+  IOCON,     //!< Module control
+  GPPU,      //!< Pull up resistor control
+  INTF,      //!< Interrupt flag register
+  INTCAP,    //!< Interrupt capture
+  GPIO,      //!< GPIO
+  OLAT,      //!< Output latch
   } IO_REGISTER;
 
 /** Bit values and masks for the GPIO port
  */
 typedef enum {
-  GPIO_SS0     = 0x01, //!< Slave select 0
-  GPIO_SS1     = 0x02, //!< Slave select 1
+  GPIO_SS0     = 0x02, //!< Slave select 0
+  GPIO_SS1     = 0x01, //!< Slave select 1
   GPIO_SS2     = 0x04, //!< Slave select 2
-  GPIO_SS3     = 0x08, //!< Slave select 3
-  GPIO_SS_MASK = 0x0F, //!< Mask for slave select bits
-  GPIO_IRQ     = 0x10, //!< IRQ line to expansion slot
+  GPIO_SS_MASK = 0x07, //!< Mask for slave select bits
+  GPIO_SLD0    = 0x08, //!< D0 on slot
+  GPIO_SLD1    = 0x10, //!< D1 on slot
+  GPIO_SL_MASK = 0x18, //!< Mask for slot IO
   GPIO_LED1    = 0x20, //!< Front panel LED 1
   GPIO_LED0    = 0x40, //!< Front panel LED 0
   GPIO_BTN     = 0x80, //!< Front panel button
@@ -215,10 +205,9 @@ typedef enum {
  */
 typedef enum {
   SPI_NONE   = 0,        //!< Deselect all devices
-  SPI_EEPROM = GPIO_SS3, //!< The EEPROM chip
-  SPI_RAM    = GPIO_SS2, //!< SRAM chip
-  SPI_SLOT0  = GPIO_SS0, //!< Expansion slot 0
-  SPI_SLOT1  = GPIO_SS1, //!< Expansion slot 1
+  SPI_EEPROM = GPIO_SS0, //!< The EEPROM chip
+  SPI_RAM    = GPIO_SS1, //!< SRAM chip
+  SPI_SLOT0  = GPIO_SS2, //!< Expansion slot 0
   } SPI_DEVICE;
 
 
@@ -255,15 +244,15 @@ static uint8_t ioRegister(uint8_t op, uint8_t reg, uint8_t data) {
  */
 static void ioUpdateRegisters() {
   if(s_regsDesired.m_iodir!=s_regsActive.m_iodir) {
-    ioRegister(IO_WRITE, IODIRB, s_regsDesired.m_iodir);
+    ioRegister(IO_WRITE, IODIR, s_regsDesired.m_iodir);
     s_regsActive.m_iodir = s_regsDesired.m_iodir;
     }
   if(s_regsDesired.m_gpio!=s_regsActive.m_gpio) {
-    ioRegister(IO_WRITE, GPIOB, s_regsDesired.m_gpio);
+    ioRegister(IO_WRITE, GPIO, s_regsDesired.m_gpio);
     s_regsActive.m_gpio = s_regsDesired.m_gpio;
     }
   if(s_regsDesired.m_pullup!=s_regsActive.m_pullup) {
-    ioRegister(IO_WRITE, GPPUB, s_regsDesired.m_pullup);
+    ioRegister(IO_WRITE, GPPU, s_regsDesired.m_pullup);
     s_regsActive.m_pullup = s_regsDesired.m_pullup;
     }
   }
@@ -424,7 +413,7 @@ void hwInit() {
   LPC_SPI0->CFG = SPI_CFG_MASTER;
   LPC_SPI0->CFG |= SPI_CFG_ENABLE;
   // Set up the IO expander
-  s_regsDesired.m_iodir = (GPIO_IRQ | GPIO_BTN);
+  s_regsDesired.m_iodir = GPIO_BTN;
   s_regsDesired.m_gpio = 0;
   s_regsDesired.m_pullup = GPIO_BTN;
   ioUpdateRegisters();
