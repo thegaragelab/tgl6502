@@ -21,6 +21,7 @@ LDFLAGS = -C ../../mos6502/rom16.cfg -m $(FILENAME).map
 # Build the list of object files based on the selections
 OBJECTS = ../../mos6502/romcrt0.o
 OBJECTS += $(patsubst %.c,%.o,$(wildcard *.c))
+OBJECTS += $(patsubst %.s,%.o,$(wildcard *.s))
 
 all: $(FILENAME).rom
 
