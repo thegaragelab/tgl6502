@@ -100,13 +100,5 @@ bool kbhit();
  */
 void putch(uint8_t ch);
 
-/** Write a NUL terminated string to the console
- *
- * @param str the string to write.
- *
- * @return the number of characters written.
- */
-int puts(const char *str);
-
 #endif /* __TGL6502_H */
 

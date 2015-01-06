@@ -48,16 +48,3 @@ void putch(uint8_t ch) {
   pIO->m_conout = ch;
   }
 
-  /** Write a NUL terminated string to the console
- *
- * @param str the string to write.
- *
- * @return the number of characters written.
- */
-int puts(const char *str) {
-  int index = 0;
-  while(str[index])
-    putch((uint8_t)str[index++]);
-  return index;
-  }
-
