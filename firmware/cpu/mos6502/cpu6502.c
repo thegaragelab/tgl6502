@@ -447,7 +447,7 @@ void cpuStep() {
       zerocalc(g_cpuState.m_y);
       signcalc(g_cpuState.m_y);
       break;
-        case OPCODE_EOR:
+    case OPCODE_EOR:
       value = getvalue();
       result = (uint16_t)g_cpuState.m_a ^ value;
       zerocalc(result);
