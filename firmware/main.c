@@ -36,6 +36,11 @@ int main(int argc, char *argv[]) {
       if((g_ioState.m_ioctl&IOCTL_IRQ_MASK)==IOCTL_IRQ_TIMER)
         cpuInterrupt(INT_IRQ);
       }
+    // Generate interrupt on input available if set
+    if(((g_ioState.m_ioctl&IOCTL_NMI_MASK)==IOCTL_NMI_INPUT)&&uartAvail())
+      cpuInterrupt(INT_NMI);
+    if(((g_ioState.m_ioctl&IOCTL_IRQ_MASK)==IOCTL_IRQ_INPUT)&&uartAvail())
+      cpuInterrupt(INT_IRQ);
     // Execute a single instruction
     cpuStep();
     instructions++;
