@@ -53,19 +53,16 @@ void SysTick_Handler(void) {
   s_timeNow++;
   }
 
-uint32_t getMillis() {
-  return s_timeNow;
-  }
-
-/** Determine the duration (in ms) since the last sample
+/** Determine if a quarter second has elapsed.
  *
- * @param sample the last millisecond count
+ * @return true if 0.25 seconds has passed.
  */
-uint32_t getDuration(uint32_t sample) {
-  uint32_t now = getMillis();
-  if(sample > now)
-    return now + (0xFFFFFFFFL - sample);
-  return now - sample;
+bool qsecElapsed() {
+  if(s_timeNow>=250) {
+    s_timeNow = 0;
+    return true;
+    }
+  return false;
   }
 
 //---------------------------------------------------------------------------

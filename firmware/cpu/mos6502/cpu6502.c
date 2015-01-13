@@ -630,6 +630,9 @@ void cpuStep() {
  * @param interrupt the type of interrupt to generate
  */
 void cpuInterrupt(INTERRUPT interrupt) {
+  if(g_cpuState.m_status&FLAG_INTERRUPT)
+    return; // Interrupt already pending
+  // Generate the interrupt
   push16(g_cpuState.m_pc);
   push8(g_cpuState.m_status);
   g_cpuState.m_status |= FLAG_INTERRUPT;

@@ -16,6 +16,7 @@
 
 #if defined(_MSC_VER)
 #  include <conio.h>
+#  include <Windows.h>
 #else
 #  include <termios.h>
 #  include <unistd.h>
@@ -125,6 +126,26 @@ static void cpuWriteIO(uint16_t address, uint8_t byte) {
 //---------------------------------------------------------------------------
 // Public API
 //---------------------------------------------------------------------------
+
+static uint32_t s_lastCheck = 0;
+
+/** Determine if a quarter second has elapsed.
+ *
+ * @return true if 0.25 seconds has passed.
+ */
+bool qsecElapsed() {
+  uint32_t now;
+#if defined(_MSC_VER)
+  SYSTEMTIME time;
+  GetSystemTime(&time);
+  now = (time.wSecond * 1000) + time.wMilliseconds;
+#endif // _MSC_VER
+  if ((now - s_lastCheck)>250) {
+    s_lastCheck = now;
+    return true;
+    }
+  return false;
+  }
 
 /** Send a single character over the UART
  *

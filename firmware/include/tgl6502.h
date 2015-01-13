@@ -186,20 +186,11 @@ void cpuInterrupt(INTERRUPT interrupt);
 // Physical hardware initialisation and helpers
 //---------------------------------------------------------------------------
 
-/** Get the current timestamp in milliseconds
+/** Determine if a quarter second has elapsed.
  *
- * This function is used for basic duration timing. The base of the timestamp
- * doesn't matter as long as the result increments every millisecond.
- *
- * @return timestamp in milliseconds
+ * @return true if 0.25 seconds has passed.
  */
-uint32_t getMillis();
-
-/** Get the duration between a previous timestamp and the current.
- *
- * Determine the duration between a previous timestamp and the current time.
- */
-uint32_t getDuration(uint32_t since);
+bool qsecElapsed();
 
 /** Initialise the external hardware
  *
