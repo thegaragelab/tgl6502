@@ -139,6 +139,10 @@ bool qsecElapsed() {
   SYSTEMTIME time;
   GetSystemTime(&time);
   now = (time.wSecond * 1000) + time.wMilliseconds;
+#else
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  now = (tv.tv_sec) * 1000 + (tv.tv_usec) / 1000;
 #endif // _MSC_VER
   if ((now - s_lastCheck)>250) {
     s_lastCheck = now;
