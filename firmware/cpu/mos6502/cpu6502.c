@@ -133,7 +133,7 @@ static const uint8_t g_OPCODE[] = {
 * @return the word read from the address.
 */
 static uint16_t cpuReadWord(uint16_t address) {
-  (uint16_t)cpuReadByte(address) | ((uint16_t)cpuReadByte(address + 1) << 8);
+  return (uint16_t)cpuReadByte(address) | ((uint16_t)cpuReadByte(address + 1) << 8);
   }
 
 /** Set the zero flag based on the given value
