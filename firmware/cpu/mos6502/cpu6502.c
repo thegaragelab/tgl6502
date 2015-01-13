@@ -126,6 +126,16 @@ static const uint8_t g_OPCODE[] = {
 #define setsign() g_cpuState.m_status |= FLAG_SIGN
 #define clearsign() g_cpuState.m_status &= (~FLAG_SIGN)
 
+/** Read a single word from the CPU address space.
+*
+* @param address the 16 bit address to read a value from.
+*
+* @return the word read from the address.
+*/
+static uint16_t cpuReadWord(uint16_t address) {
+  (uint16_t)cpuReadByte(address) | ((uint16_t)cpuReadByte(address + 1) << 8);
+  }
+
 /** Set the zero flag based on the given value
  *
  * @param n the value to check
@@ -190,7 +200,7 @@ static void push8(uint8_t pushval) {
  */
 static uint16_t pull16() {
   uint16_t temp16;
-  temp16 = cpuReadByte(BASE_STACK + ((g_cpuState.m_sp + 1) & 0xFF)) | ((uint16_t)cpuReadByte(BASE_STACK + ((g_cpuState.m_sp + 2) & 0xFF)) << 8);
+  temp16 = cpuReadWord(BASE_STACK + ((g_cpuState.m_sp + 1) & 0xFF));
   g_cpuState.m_sp += 2;
   return(temp16);
   }
@@ -249,16 +259,16 @@ void cpuStep() {
   // Apply the addressing mode
   switch(id) {
     case MODE_ABSO:
-      ea = (uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8);
+      ea = cpuReadWord(g_cpuState.m_pc);
       g_cpuState.m_pc += 2;
       break;
     case MODE_ABSX:
-      ea = ((uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8));
+      ea = cpuReadWord(g_cpuState.m_pc);
       ea += (uint16_t)g_cpuState.m_x;
       g_cpuState.m_pc += 2;
       break;
     case MODE_ABSY:
-      ea = ((uint16_t)cpuReadByte(g_cpuState.m_pc) | ((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8));
+      ea = cpuReadWord(g_cpuState.m_pc);
       ea += (uint16_t)g_cpuState.m_y;
       g_cpuState.m_pc += 2;
       break;
@@ -266,14 +276,14 @@ void cpuStep() {
       ea = g_cpuState.m_pc++;
       break;
     case MODE_IND:
-      eahelp = (uint16_t)cpuReadByte(g_cpuState.m_pc) | (uint16_t)((uint16_t)cpuReadByte(g_cpuState.m_pc+1) << 8);
+      eahelp = cpuReadWord(g_cpuState.m_pc);
       eahelp2 = (eahelp & 0xFF00) | ((eahelp + 1) & 0x00FF); //replicate 6502 page-boundary wraparound bug
       ea = (uint16_t)cpuReadByte(eahelp) | ((uint16_t)cpuReadByte(eahelp2) << 8);
       g_cpuState.m_pc += 2;
       break;
     case MODE_INDX:
       eahelp = (uint16_t)(((uint16_t)cpuReadByte(g_cpuState.m_pc++) + (uint16_t)g_cpuState.m_x) & 0xFF); //zero-page wraparound for table pointer
-      ea = (uint16_t)cpuReadByte(eahelp & 0x00FF) | ((uint16_t)cpuReadByte((eahelp+1) & 0x00FF) << 8);
+      ea = cpuReadWord(eahelp);
       break;
     case MODE_INDY:
       eahelp = (uint16_t)cpuReadByte(g_cpuState.m_pc++);
@@ -369,7 +379,7 @@ void cpuStep() {
       push16(g_cpuState.m_pc); //push next instruction address onto stack
       push8(g_cpuState.m_status | FLAG_BREAK); //push CPU status to stack
       setinterrupt(); //set interrupt flag
-      g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
+      g_cpuState.m_pc = cpuReadWord(0xFFFE);
       break;
     case OPCODE_BVC:
       if ((g_cpuState.m_status & FLAG_OVERFLOW) == 0)
@@ -636,10 +646,7 @@ void cpuInterrupt(INTERRUPT interrupt) {
   push16(g_cpuState.m_pc);
   push8(g_cpuState.m_status);
   g_cpuState.m_status |= FLAG_INTERRUPT;
-  if (interrupt==INT_NMI)
-    g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFA) | ((uint16_t)cpuReadByte(0xFFFB) << 8);
-  else
-    g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFE) | ((uint16_t)cpuReadByte(0xFFFF) << 8);
+  g_cpuState.m_pc = cpuReadWord((interrupt==INT_NMI)?0xFFFA:0xFFFE);
   }
 
 /** Reset the CPU
@@ -648,10 +655,11 @@ void cpuInterrupt(INTERRUPT interrupt) {
  */
 void cpuReset() {
   // Reset the CPU state
-  g_cpuState.m_pc = (uint16_t)cpuReadByte(0xFFFC) | ((uint16_t)cpuReadByte(0xFFFD) << 8);
+  g_cpuState.m_pc = cpuReadWord(0xFFFC);
   g_cpuState.m_a = 0;
   g_cpuState.m_x = 0;
   g_cpuState.m_y = 0;
   g_cpuState.m_sp = 0xFD;
   g_cpuState.m_status |= FLAG_CONSTANT;
   }
+
