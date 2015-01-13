@@ -373,6 +373,10 @@ static void cpuWriteIO(uint16_t address, uint8_t byte) {
 // Emulator access functions
 //---------------------------------------------------------------------------
 
+//--- Predefined register values to avoid bringing in division functions
+#define UARTFRGDIV_VAL 0xff
+#define USART_BRG_VAL __MAIN_CLOCK / 16 / BAUD_RATE - 1
+
 /** Initialise the hardware
  *
  * In this function we set up the switch matrix, initialise the GPIO, UART
@@ -407,7 +411,7 @@ void hwInit() {
   /* Enable UART clock */
   LPC_SYSCON->SYSAHBCLKCTRL |= (1<<18);
   // Set up the system tick timer
-  SysTick->LOAD = (SystemCoreClock / 1000 * 1/*# ms*/) - 1; /* Every 1 ms */
+  SysTick->LOAD = (__SYSTEM_CLOCK / 1000 * 1) - 1; /* Every 1 ms */
   SysTick->VAL = 0;
   SysTick->CTRL = 0x7; /* d2:ClkSrc=SystemCoreClock, d1:Interrupt=enabled, d0:SysTick=enabled */
   // Set up the UART
@@ -419,10 +423,10 @@ void hwInit() {
   LPC_SYSCON->PRESETCTRL    |=  (1 << 3);
   /* Configure UART0 */
   LPC_USART0->CFG = UART_DATA_LENGTH_8 | UART_PARITY_NONE | UART_STOP_BIT_1;
-  LPC_USART0->BRG = __MAIN_CLOCK / 16 / BAUD_RATE - 1;
-  LPC_SYSCON->UARTFRGDIV = 0xFF;
-  LPC_SYSCON->UARTFRGMULT = (((__MAIN_CLOCK / 16) * (LPC_SYSCON->UARTFRGDIV + 1)) /
-    (BAUD_RATE * (LPC_USART0->BRG + 1))) - (LPC_SYSCON->UARTFRGDIV + 1);
+  LPC_USART0->BRG = USART_BRG_VAL;
+  LPC_SYSCON->UARTFRGDIV = UARTFRGDIV_VAL;
+  LPC_SYSCON->UARTFRGMULT = (((__MAIN_CLOCK / 16) * (UARTFRGDIV_VAL + 1)) /
+    (BAUD_RATE * (USART_BRG_VAL + 1))) - (UARTFRGDIV_VAL + 1);
   /* Clear the status bits */
   LPC_USART0->STAT = UART_STATUS_CTSDEL | UART_STATUS_RXBRKDEL;
   /* Enable UART0 interrupt */
