@@ -171,7 +171,7 @@ void
 ResetISR(void)
 {
 #ifdef __USE_CMSIS
-    SystemInit();
+//    SystemInit();
 #endif
     crt0();
     main();
