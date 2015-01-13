@@ -170,10 +170,16 @@ static void carrycalc(uint16_t n) {
   }
 
 /** Set the overflow flag based on the given value
+ *
+ * @param n result
+ * @param m accumulator
+ * @param o = memory
  */
-#define overflowcalc(n, m, o) { /* n = result, m = accumulator, o = memory */ \
-  if (((n) ^ (uint16_t)(m)) & ((n) ^ (o)) & 0x0080) setoverflow();\
-    else clearoverflow();\
+static void overflowcalc(uint16_t n, uint16_t m, uint16_t o) {
+  if ((n ^ m) & (n ^ o) & 0x0080)
+    setoverflow();
+  else
+    clearoverflow();
   }
 
 /** Push a 16 bit value on to the stack
