@@ -103,7 +103,7 @@ $(FILENAME): $(OBJECTS)
 
 # How to build the AXF file
 $(FILENAME).axf: $(LINKERSCRIPT) $(OBJECTS)
-	@$(LD) -o $@ $(LDFLAGS) -Map $(FILENAME)_$(TARGET).map $(OBJECTS) "$(LIBGCC)"
+	@$(LD) -o $@ $(LDFLAGS) --cref -Map $(FILENAME)_$(TARGET).map $(OBJECTS) "$(LIBGCC)"
 	-@echo ""
 	@$(SIZE) $(FILENAME).axf
 
