@@ -265,7 +265,7 @@ uint8_t cpuReadByte(uint16_t address) {
   uint8_t result = 0;
   uint32_t phys = getPhysicalAddress(address);
   uint8_t *pMem = (phys&ROM_BASE)?g_ROM:g_RAM;
-  phys &= 0x0007FFFL;
+  phys &= 0x007FFFFL;
   if (phys<MEMORY_SIZE)
     result = pMem[phys];
   return result;
